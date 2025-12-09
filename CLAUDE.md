@@ -19,35 +19,53 @@ This is the PRIMARY and REQUIRED approach for all responsive layouts in this pro
 
 #### The Standard Approach (Similar to Flutter's MediaQuery)
 
+**CRITICAL: DO NOT REPEAT RESPONSIVE CALCULATIONS IN EVERY COMPONENT!**
+
+**Use `getResponsiveValues()` instead of manual calculations.**
+
 **Every component must:**
 1. Import and use `useScreenSize` hook to measure actual screen dimensions
-2. Calculate all responsive values programmatically based on measurements
-3. Apply values using inline `style` props
-4. **NEVER** use Tailwind breakpoints (`sm:`, `md:`, `lg:`, etc.)
+2. **Use `getResponsiveValues(width, height)` to get all common responsive values at once** (DO NOT manually calculate font sizes, padding, margins, etc.)
+3. Only calculate component-specific values if needed
+4. Apply values using inline `style` props
+5. **NEVER** use Tailwind breakpoints (`sm:`, `md:`, `lg:`, etc.)
 
+**✅ CORRECT - Use getResponsiveValues:**
 ```tsx
-import { useScreenSize, getResponsiveFontSize, getResponsivePadding } from '@/app/hooks/useScreenSize';
+import { useScreenSize, getResponsiveValues } from '@/app/hooks/useScreenSize';
 
 export default function MyComponent() {
-  // 1. Measure screen (required in every component)
+  // 1. Measure screen
   const { width, height } = useScreenSize();
 
-  // 2. Calculate responsive values
-  const padding = getResponsivePadding(width, height);
-  const fontSize = getResponsiveFontSize(width, 14, 24);
-  const spacing = Math.max(16, Math.min(width * 0.03, 32));
+  // 2. Get ALL common responsive values from the hook (DO THIS!)
+  const responsive = getResponsiveValues(width, height);
 
-  // 3. Apply with inline styles
+  // 3. Only calculate component-specific values if needed
+  const customSpacing = Math.max(10, Math.min(width * 0.025, 20));
+
+  // 4. Apply with inline styles using responsive object
   return (
     <div style={{
-      padding: `${padding.vertical}px ${padding.horizontal}px`,
-      fontSize: `${fontSize}px`,
-      gap: `${spacing}px`
+      padding: `${responsive.padding.vertical}px ${responsive.padding.horizontal}px`,
+      fontSize: `${responsive.fontSize.body}px`,
+      gap: `${responsive.spacing.gap}px`
     }}>
-      {/* Content */}
+      <h1 style={{ fontSize: `${responsive.fontSize.heading}px` }}>Title</h1>
+      <p style={{ fontSize: `${responsive.fontSize.body}px` }}>Body text</p>
     </div>
   );
 }
+```
+
+**❌ WRONG - Don't manually calculate common values:**
+```tsx
+// ❌ DON'T DO THIS - Wasteful and repetitive!
+const headingSize = getResponsiveFontSize(width, 24, 32);
+const bodySize = getResponsiveFontSize(width, 14, 16);
+const smallSize = getResponsiveFontSize(width, 12, 14);
+const padding = getResponsivePadding(width, height);
+// ... etc
 ```
 
 #### Available Helper Functions
@@ -59,8 +77,19 @@ Import from `@/app/hooks/useScreenSize`:
   - Updates automatically on window resize
   - Returns actual pixel values
 
-**Helper Functions:**
-- `getResponsiveFontSize(width, minSize, maxSize)` - Calculate font size
+**PRIMARY Function (USE THIS!):**
+- `getResponsiveValues(width, height)` - **Returns ALL common responsive values at once**
+  - **ALWAYS use this instead of calculating individual values**
+  - Returns an object with:
+    - `padding: { horizontal, vertical }` - Screen-percentage based padding
+    - `fontSize: { heading, subheading, body, label, small, caption }` - All font sizes
+    - `card: { padding, borderRadius, maxWidth }` - Card/container values
+    - `spacing: { vertical, horizontal, gap }` - All spacing values
+    - `margin: { bottom, top, sides }` - All margin values
+    - `device: { type, isMobile, isTablet, isDesktop, columns }` - Device info
+
+**Individual Helper Functions (Only use for custom/special cases):**
+- `getResponsiveFontSize(width, minSize, maxSize)` - Calculate custom font size
   - Scales smoothly between min and max based on screen width
   - Example: `getResponsiveFontSize(width, 14, 24)` → 14px on mobile, 24px on desktop
 
@@ -74,35 +103,46 @@ Import from `@/app/hooks/useScreenSize`:
 **Common Patterns:**
 
 ```tsx
-// Padding/Margins
-const containerPadding = Math.max(16, Math.min(width * 0.05, 80));
-const verticalMargin = Math.max(12, Math.min(height * 0.03, 40));
+// ✅ USE getResponsiveValues for common values
+const { width, height } = useScreenSize();
+const responsive = getResponsiveValues(width, height);
 
-// Font Sizes
-const heading = getResponsiveFontSize(width, 24, 48);
-const body = getResponsiveFontSize(width, 14, 16);
-const caption = getResponsiveFontSize(width, 12, 14);
-
-// Spacing
-const gap = Math.max(8, Math.min(width * 0.02, 24));
+// Use responsive object for all standard values
+<div style={{
+  padding: `${responsive.padding.vertical}px ${responsive.padding.horizontal}px`,
+  fontSize: `${responsive.fontSize.body}px`,
+  gap: `${responsive.spacing.gap}px`,
+  margin: `${responsive.margin.top}px ${responsive.margin.sides}px`
+}}>
+  <h1 style={{ fontSize: `${responsive.fontSize.heading}px` }}>Title</h1>
+  <h2 style={{ fontSize: `${responsive.fontSize.subheading}px` }}>Subtitle</h2>
+  <p style={{ fontSize: `${responsive.fontSize.body}px` }}>Body text</p>
+  <small style={{ fontSize: `${responsive.fontSize.small}px` }}>Caption</small>
+</div>
 
 // Conditional Layout
-const columns = width > 768 ? 3 : width > 480 ? 2 : 1;
+const columns = responsive.device.columns; // Automatically 1, 2, or 3
 const gridCols = width > 768 ? 'repeat(3, 1fr)' : width > 480 ? 'repeat(2, 1fr)' : '1fr';
 
 // Component Visibility
-const showSidebar = width > 1024;
-const isMobile = width < 640;
+const showSidebar = responsive.device.isDesktop;
+const isMobile = responsive.device.isMobile;
+
+// Only calculate custom values when needed
+const customSpacing = Math.max(10, Math.min(width * 0.025, 20));
 ```
 
 #### Rules
 - ✅ **ALWAYS** use `useScreenSize()` in components
-- ✅ **ALWAYS** calculate sizes programmatically
+- ✅ **ALWAYS** use `getResponsiveValues(width, height)` for common values (font sizes, padding, margins, spacing)
 - ✅ **ALWAYS** apply values with inline `style` props
 - ✅ **ALWAYS** use real measurements for conditionals
+- ✅ **ONLY** calculate custom values when the standard responsive values don't fit your needs
+- ❌ **NEVER** manually calculate common values like font sizes, padding, margins if they exist in `getResponsiveValues`
 - ❌ **NEVER** use Tailwind breakpoints: `sm:`, `md:`, `lg:`, `xl:`, `2xl:`
 - ❌ **NEVER** use arbitrary breakpoints: `min-[640px]:`, `max-[1024px]:`
 - ❌ **NEVER** use viewport units in CSS: `vw`, `vh`, `clamp()`
+- ❌ **NEVER** repeat responsive calculations across components
 
 #### Why This Approach?
 1. **Precise Control**: Exact pixel measurements like Flutter

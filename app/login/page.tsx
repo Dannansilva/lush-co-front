@@ -2,21 +2,26 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import Input from "../components/Input";
 import { useScreenSize, getResponsiveValues } from "../hooks/useScreenSize";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   // Measure screen size and get all responsive values
   const { width, height } = useScreenSize();
-  const { padding, fontSize, card, spacing, margin, device } = getResponsiveValues(width, height);
+  const { padding, fontSize, card, spacing, margin } = getResponsiveValues(width, height);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Handle login logic here
     console.log("Login submitted:", { email, password });
+
+    // Navigate to receptionist dashboard
+    router.push("/receptionist");
   };
 
   return (
