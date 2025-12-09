@@ -3,10 +3,15 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Input from "../components/Input";
+import { useScreenSize, getResponsiveValues } from "../hooks/useScreenSize";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  // Measure screen size and get all responsive values
+  const { width, height } = useScreenSize();
+  const { padding, fontSize, card, spacing, margin, device } = getResponsiveValues(width, height);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,23 +33,55 @@ export default function LoginPage() {
       </div>
 
       {/* Centered Login Form */}
-      <div className="relative min-h-screen flex items-center justify-center px-[5vw] py-[5vh]">
-        <div className="w-[90%] max-w-[28rem] bg-black/20 backdrop-blur-sm border border-zinc-700/50 rounded-2xl p-[clamp(1.5rem,4vw,2.5rem)] shadow-2xl">
-          <div className="mb-[clamp(1.5rem,3vh,2rem)]">
-            <h2 className="text-[clamp(1.5rem,4vw,2rem)] font-semibold text-white mb-[0.5rem] text-center">
+      <div
+        className="relative min-h-screen flex items-center justify-center"
+        style={{
+          paddingLeft: `${padding.horizontal}px`,
+          paddingRight: `${padding.horizontal}px`,
+          paddingTop: `${padding.vertical}px`,
+          paddingBottom: `${padding.vertical}px`,
+        }}
+      >
+        <div
+          className="w-[90%] max-w-[28rem] bg-black/20 backdrop-blur-sm border border-zinc-700/50 rounded-2xl shadow-2xl"
+          style={{
+            padding: `${card.padding}px`,
+          }}
+        >
+          <div style={{ marginBottom: `${margin.bottom}px` }}>
+            <h2
+              className="font-semibold text-white text-center"
+              style={{
+                fontSize: `${fontSize.heading}px`,
+                marginBottom: '8px'
+              }}
+            >
               Welcome back
             </h2>
-            <p className="text-zinc-400 text-[clamp(0.875rem,1.5vw,1rem)] text-center">
+            <p
+              className="text-zinc-400 text-center"
+              style={{ fontSize: `${fontSize.body}px` }}
+            >
               Sign in to access your dashboard
             </p>
           </div>
 
           <form
             onSubmit={handleSubmit}
-            className="space-y-[clamp(1.25rem,2.5vh,1.5rem)]"
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: `${spacing.vertical}px`
+            }}
           >
             <div>
-              <label className="block text-white text-[clamp(0.875rem,1.2vw,0.875rem)] font-medium mb-[0.5rem]">
+              <label
+                className="block text-white font-medium"
+                style={{
+                  fontSize: `${fontSize.label}px`,
+                  marginBottom: '8px'
+                }}
+              >
                 Email
               </label>
               <Input
@@ -71,7 +108,13 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="block text-white text-[clamp(0.875rem,1.2vw,0.875rem)] font-medium mb-[0.5rem]">
+              <label
+                className="block text-white font-medium"
+                style={{
+                  fontSize: `${fontSize.label}px`,
+                  marginBottom: '8px'
+                }}
+              >
                 Password
               </label>
               <Input
@@ -99,7 +142,8 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-semibold py-[0.875rem] rounded-lg transition-colors flex items-center justify-center gap-2"
+              className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+              style={{ padding: '14px' }}
             >
               Sign in
               <svg
@@ -117,6 +161,8 @@ export default function LoginPage() {
               </svg>
             </button>
           </form>
+
+          
         </div>
       </div>
     </div>

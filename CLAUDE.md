@@ -12,17 +12,104 @@ This is a Next.js 16 frontend application using React 19, TypeScript, and Tailwi
 - **Use Bun** for all package management and script execution (not npm/yarn/pnpm)
 
 ### Responsive Design Requirements
-- **Use dynamic, viewport-based sizing** that automatically adapts to any screen size
-- **Avoid fixed breakpoints** - components should fluidly adapt to available space
-- **Preferred approaches:**
-  - ✅ Viewport units: `vh` (viewport height), `vw` (viewport width), `dvh` (dynamic viewport height)
-  - ✅ Percentage-based sizing: `w-[90%]`, `h-[80vh]`, etc.
-  - ✅ Fluid typography with `clamp()`: `text-[clamp(1rem,2vw,1.5rem)]`
-  - ✅ Flexible spacing: `p-[2vw]`, `gap-[1.5vh]`, `m-[3%]`
-  - ✅ Dynamic calculations: `w-[calc(100vw-2rem)]`
-  - ❌ Avoid: Fixed breakpoints like `sm:`, `md:`, `lg:`, `min-[640px]:`, etc.
-- **Example:** Instead of `text-sm md:text-base lg:text-lg`, use `text-[clamp(0.875rem,1.5vw,1.125rem)]`
-- This ensures components automatically adapt to the actual available screen dimensions
+
+**IMPORTANT: Use the `useScreenSize` hook in EVERY component that needs responsive design.**
+
+This is the PRIMARY and REQUIRED approach for all responsive layouts in this project.
+
+#### The Standard Approach (Similar to Flutter's MediaQuery)
+
+**Every component must:**
+1. Import and use `useScreenSize` hook to measure actual screen dimensions
+2. Calculate all responsive values programmatically based on measurements
+3. Apply values using inline `style` props
+4. **NEVER** use Tailwind breakpoints (`sm:`, `md:`, `lg:`, etc.)
+
+```tsx
+import { useScreenSize, getResponsiveFontSize, getResponsivePadding } from '@/app/hooks/useScreenSize';
+
+export default function MyComponent() {
+  // 1. Measure screen (required in every component)
+  const { width, height } = useScreenSize();
+
+  // 2. Calculate responsive values
+  const padding = getResponsivePadding(width, height);
+  const fontSize = getResponsiveFontSize(width, 14, 24);
+  const spacing = Math.max(16, Math.min(width * 0.03, 32));
+
+  // 3. Apply with inline styles
+  return (
+    <div style={{
+      padding: `${padding.vertical}px ${padding.horizontal}px`,
+      fontSize: `${fontSize}px`,
+      gap: `${spacing}px`
+    }}>
+      {/* Content */}
+    </div>
+  );
+}
+```
+
+#### Available Helper Functions
+
+Import from `@/app/hooks/useScreenSize`:
+
+**Core Hook:**
+- `useScreenSize()` - Returns `{ width, height }` of current screen
+  - Updates automatically on window resize
+  - Returns actual pixel values
+
+**Helper Functions:**
+- `getResponsiveFontSize(width, minSize, maxSize)` - Calculate font size
+  - Scales smoothly between min and max based on screen width
+  - Example: `getResponsiveFontSize(width, 14, 24)` → 14px on mobile, 24px on desktop
+
+- `getResponsivePadding(width, height)` - Calculate padding as % of screen
+  - Returns `{ horizontal, vertical }` (5% of width/height)
+  - Example: `getResponsivePadding(1920, 1080)` → `{ horizontal: 96, vertical: 54 }`
+
+- `getResponsiveSize(width, baseSize, scaleFactor)` - Calculate any size with scaling
+  - Example: `getResponsiveSize(width, 40, 1.5)` - scales base size by factor
+
+**Common Patterns:**
+
+```tsx
+// Padding/Margins
+const containerPadding = Math.max(16, Math.min(width * 0.05, 80));
+const verticalMargin = Math.max(12, Math.min(height * 0.03, 40));
+
+// Font Sizes
+const heading = getResponsiveFontSize(width, 24, 48);
+const body = getResponsiveFontSize(width, 14, 16);
+const caption = getResponsiveFontSize(width, 12, 14);
+
+// Spacing
+const gap = Math.max(8, Math.min(width * 0.02, 24));
+
+// Conditional Layout
+const columns = width > 768 ? 3 : width > 480 ? 2 : 1;
+const gridCols = width > 768 ? 'repeat(3, 1fr)' : width > 480 ? 'repeat(2, 1fr)' : '1fr';
+
+// Component Visibility
+const showSidebar = width > 1024;
+const isMobile = width < 640;
+```
+
+#### Rules
+- ✅ **ALWAYS** use `useScreenSize()` in components
+- ✅ **ALWAYS** calculate sizes programmatically
+- ✅ **ALWAYS** apply values with inline `style` props
+- ✅ **ALWAYS** use real measurements for conditionals
+- ❌ **NEVER** use Tailwind breakpoints: `sm:`, `md:`, `lg:`, `xl:`, `2xl:`
+- ❌ **NEVER** use arbitrary breakpoints: `min-[640px]:`, `max-[1024px]:`
+- ❌ **NEVER** use viewport units in CSS: `vw`, `vh`, `clamp()`
+
+#### Why This Approach?
+1. **Precise Control**: Exact pixel measurements like Flutter
+2. **Programmatic Logic**: Use JavaScript calculations and conditionals
+3. **True Responsiveness**: Adapts to ANY screen size, not just predefined breakpoints
+4. **Consistent**: Same pattern across entire codebase
+5. **Maintainable**: Easy to understand and modify calculations
 
 ### Component Architecture
 - **Always create reusable components** - avoid duplicating code
@@ -43,6 +130,29 @@ This is a Next.js 16 frontend application using React 19, TypeScript, and Tailwi
 - `bun start` - Start production server
 - `bun run lint` - Run ESLint
 - `bun install` - Install dependencies
+
+### **IMPORTANT: Code Validation Workflow**
+
+**After making ANY code changes, ALWAYS run these commands before finishing:**
+
+1. **`bun run build`** - Verify the code builds without errors
+2. **`bun run lint`** - Check for linting issues
+
+**This is REQUIRED for every code change. Do not consider the task complete until both commands run successfully.**
+
+Example workflow:
+```bash
+# 1. Make code changes
+# 2. Verify build
+bun run build
+
+# 3. Check linting
+bun run lint
+
+# 4. Only then is the task complete
+```
+
+If either command fails, fix the errors before proceeding.
 
 ## Architecture
 
