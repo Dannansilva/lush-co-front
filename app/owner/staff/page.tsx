@@ -1,7 +1,61 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useScreenSize, getResponsiveValues } from "@/app/hooks/useScreenSize";
+
+interface StaffMember {
+  id: number;
+  name: string;
+  role: string;
+  email: string;
+  phone: string;
+  rating: number;
+  clients: number;
+  status: string;
+  specialties: string[];
+}
+
+interface ModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  children: React.ReactNode;
+  cardPadding: number;
+  spacing: number;
+  responsiveFontSize: { heading: number; small: number };
+}
+
+function Modal({ isOpen, onClose, title, children, cardPadding, spacing, responsiveFontSize }: ModalProps) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/60" onClick={onClose}></div>
+      <div
+        className="relative bg-zinc-900 rounded-xl border border-zinc-800 w-full max-w-md mx-4"
+        style={{ padding: `${cardPadding * 2}px` }}
+      >
+        <div className="flex items-center justify-between" style={{ marginBottom: `${spacing * 1.5}px` }}>
+          <div>
+            <h2 className="font-bold" style={{ fontSize: `${responsiveFontSize.heading}px` }}>{title}</h2>
+            <p className="text-zinc-400" style={{ fontSize: `${responsiveFontSize.small}px` }}>
+              Fill in the details for the {title.toLowerCase().includes('edit') ? 'team member' : 'new team member'}.
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-zinc-400 hover:text-white transition-colors"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
 
 export default function StaffPage() {
   const { width, height } = useScreenSize();
@@ -12,7 +66,7 @@ export default function StaffPage() {
 
   const isMobile = width < 768;
 
-  const staff = [
+  const [staff, setStaff] = useState<StaffMember[]>([
     {
       id: 1,
       name: "Emma Wilson",
@@ -68,7 +122,67 @@ export default function StaffPage() {
       status: "active",
       specialties: ["Basic Cuts", "Styling", "Treatments"]
     }
-  ];
+  ]);
+
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+
+  // Form state
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: ""
+  });
+
+  const handleAddStaff = () => {
+    setFormData({ name: "", email: "", phone: "" });
+    setIsAddModalOpen(true);
+  };
+
+  const handleEditStaff = (member: StaffMember) => {
+    setEditingStaff(member);
+    setFormData({
+      name: member.name,
+      email: member.email,
+      phone: member.phone
+    });
+    setIsEditModalOpen(true);
+    setOpenMenuId(null);
+  };
+
+  const handleSubmitAdd = (e: React.FormEvent) => {
+    e.preventDefault();
+    const newStaff: StaffMember = {
+      id: staff.length + 1,
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone,
+      role: "Stylist",
+      rating: 0,
+      clients: 0,
+      status: "active",
+      specialties: []
+    };
+    setStaff([...staff, newStaff]);
+    setIsAddModalOpen(false);
+    setFormData({ name: "", email: "", phone: "" });
+  };
+
+  const handleSubmitEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingStaff) {
+      setStaff(staff.map(member =>
+        member.id === editingStaff.id
+          ? { ...member, name: formData.name, email: formData.email, phone: formData.phone }
+          : member
+      ));
+      setIsEditModalOpen(false);
+      setEditingStaff(null);
+      setFormData({ name: "", email: "", phone: "" });
+    }
+  };
 
   return (
     <>
@@ -117,6 +231,7 @@ export default function StaffPage() {
             </div>
 
             <button
+              onClick={handleAddStaff}
               className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold rounded-lg transition-colors flex items-center gap-2"
               style={{ padding: `${spacing}px ${cardPadding * 1.5}px`, fontSize: `${responsive.fontSize.body}px` }}
             >
@@ -152,11 +267,34 @@ export default function StaffPage() {
                     </div>
                   </div>
 
-                  <button className="text-zinc-400 hover:text-white">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                    </svg>
-                  </button>
+                  <div className="relative">
+                    <button
+                      className="text-zinc-400 hover:text-white"
+                      onClick={() => setOpenMenuId(openMenuId === member.id ? null : member.id)}
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                      </svg>
+                    </button>
+
+                    {openMenuId === member.id && (
+                      <div
+                        className="absolute right-0 mt-2 w-48 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl z-10"
+                        style={{ padding: `${spacing / 2}px` }}
+                      >
+                        <button
+                          onClick={() => handleEditStaff(member)}
+                          className="w-full text-left px-3 py-2 hover:bg-zinc-700 rounded flex items-center gap-2 text-white"
+                          style={{ fontSize: `${responsive.fontSize.body}px` }}
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                          Edit Staff
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-2" style={{ marginBottom: `${spacing}px` }}>
@@ -213,6 +351,136 @@ export default function StaffPage() {
           </div>
         </div>
       </div>
+
+      {/* Add Staff Modal */}
+      <Modal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        title="Add New Staff Member"
+        cardPadding={cardPadding}
+        spacing={spacing}
+        responsiveFontSize={responsive.fontSize}
+      >
+        <form onSubmit={handleSubmitAdd} style={{ display: 'flex', flexDirection: 'column', gap: `${spacing}px` }}>
+          <div>
+            <label className="block text-white font-medium" style={{ fontSize: `${responsive.fontSize.label}px`, marginBottom: '8px' }}>
+              Full Name
+            </label>
+            <input
+              type="text"
+              placeholder="Enter full name"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              required
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500"
+              style={{ padding: `${spacing}px ${cardPadding}px`, fontSize: `${responsive.fontSize.body}px` }}
+            />
+          </div>
+
+          <div>
+            <label className="block text-white font-medium" style={{ fontSize: `${responsive.fontSize.label}px`, marginBottom: '8px' }}>
+              Email
+            </label>
+            <input
+              type="email"
+              placeholder="email@lushandco.com"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              required
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500"
+              style={{ padding: `${spacing}px ${cardPadding}px`, fontSize: `${responsive.fontSize.body}px` }}
+            />
+          </div>
+
+          <div>
+            <label className="block text-white font-medium" style={{ fontSize: `${responsive.fontSize.label}px`, marginBottom: '8px' }}>
+              Phone
+            </label>
+            <input
+              type="tel"
+              placeholder="(555) 000-0000"
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              required
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500"
+              style={{ padding: `${spacing}px ${cardPadding}px`, fontSize: `${responsive.fontSize.body}px` }}
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-semibold rounded-lg transition-colors"
+            style={{ padding: `${spacing}px`, fontSize: `${responsive.fontSize.body}px` }}
+          >
+            Add Staff Member
+          </button>
+        </form>
+      </Modal>
+
+      {/* Edit Staff Modal */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        title="Edit Staff Member"
+        cardPadding={cardPadding}
+        spacing={spacing}
+        responsiveFontSize={responsive.fontSize}
+      >
+        <form onSubmit={handleSubmitEdit} style={{ display: 'flex', flexDirection: 'column', gap: `${spacing}px` }}>
+          <div>
+            <label className="block text-white font-medium" style={{ fontSize: `${responsive.fontSize.label}px`, marginBottom: '8px' }}>
+              Full Name
+            </label>
+            <input
+              type="text"
+              placeholder="Enter full name"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              required
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500"
+              style={{ padding: `${spacing}px ${cardPadding}px`, fontSize: `${responsive.fontSize.body}px` }}
+            />
+          </div>
+
+          <div>
+            <label className="block text-white font-medium" style={{ fontSize: `${responsive.fontSize.label}px`, marginBottom: '8px' }}>
+              Email
+            </label>
+            <input
+              type="email"
+              placeholder="email@lushandco.com"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              required
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500"
+              style={{ padding: `${spacing}px ${cardPadding}px`, fontSize: `${responsive.fontSize.body}px` }}
+            />
+          </div>
+
+          <div>
+            <label className="block text-white font-medium" style={{ fontSize: `${responsive.fontSize.label}px`, marginBottom: '8px' }}>
+              Phone
+            </label>
+            <input
+              type="tel"
+              placeholder="(555) 000-0000"
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              required
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500"
+              style={{ padding: `${spacing}px ${cardPadding}px`, fontSize: `${responsive.fontSize.body}px` }}
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-semibold rounded-lg transition-colors"
+            style={{ padding: `${spacing}px`, fontSize: `${responsive.fontSize.body}px` }}
+          >
+            Save Changes
+          </button>
+        </form>
+      </Modal>
     </>
   );
 }

@@ -20,8 +20,8 @@ export default function LoginPage() {
     // Handle login logic here
     console.log("Login submitted:", { email, password });
 
-    // Navigate to receptionist dashboard
-    router.push("/receptionist");
+    // Navigate to dashboard
+    router.push("/owner");
   };
 
   return (

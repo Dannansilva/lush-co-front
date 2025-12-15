@@ -3,7 +3,8 @@
     "allow": [
       "Bash(mkdir:*)",
       "Bash(bun run lint)",
-      "Bash(bun run build:*)"
+      "Bash(bun run build:*)",
+      "Bash(rm:*)"
     ],
     "deny": [],
     "ask": []

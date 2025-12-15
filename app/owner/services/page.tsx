@@ -1,7 +1,68 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useScreenSize, getResponsiveValues } from "@/app/hooks/useScreenSize";
+
+interface Service {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+  duration: number;
+  popular: boolean;
+  categoryId: number;
+}
+
+interface ServiceCategory {
+  id: number;
+  name: string;
+  icon: string;
+  count: number;
+  services: Service[];
+}
+
+interface ModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  subtitle: string;
+  children: React.ReactNode;
+  cardPadding: number;
+  spacing: number;
+  responsiveFontSize: { heading: number; small: number };
+}
+
+function Modal({ isOpen, onClose, title, subtitle, children, cardPadding, spacing, responsiveFontSize }: ModalProps) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/60" onClick={onClose}></div>
+      <div
+        className="relative bg-zinc-900 rounded-xl border border-zinc-800 w-full max-w-md mx-4"
+        style={{ padding: `${cardPadding * 2}px` }}
+      >
+        <div className="flex items-center justify-between" style={{ marginBottom: `${spacing * 1.5}px` }}>
+          <div>
+            <h2 className="font-bold" style={{ fontSize: `${responsiveFontSize.heading}px` }}>{title}</h2>
+            <p className="text-zinc-400" style={{ fontSize: `${responsiveFontSize.small}px` }}>
+              {subtitle}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-zinc-400 hover:text-white transition-colors"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
 
 export default function ServicesPage() {
   const { width, height } = useScreenSize();
@@ -12,7 +73,7 @@ export default function ServicesPage() {
 
   const isMobile = width < 768;
 
-  const serviceCategories = [
+  const [serviceCategories, setServiceCategories] = useState<ServiceCategory[]>([
     {
       id: 1,
       name: "Hair Styling",
@@ -25,7 +86,8 @@ export default function ServicesPage() {
           description: "Expert cut tailored to your face shape and style",
           price: 85,
           duration: 45,
-          popular: true
+          popular: true,
+          categoryId: 1
         },
         {
           id: 2,
@@ -33,7 +95,8 @@ export default function ServicesPage() {
           description: "Professional blow-dry and styling",
           price: 65,
           duration: 30,
-          popular: true
+          popular: true,
+          categoryId: 1
         },
         {
           id: 3,
@@ -41,7 +104,8 @@ export default function ServicesPage() {
           description: "Elegant updo styling for special occasions",
           price: 150,
           duration: 90,
-          popular: false
+          popular: false,
+          categoryId: 1
         }
       ]
     },
@@ -57,7 +121,8 @@ export default function ServicesPage() {
           description: "Complete color transformation",
           price: 120,
           duration: 120,
-          popular: true
+          popular: true,
+          categoryId: 2
         },
         {
           id: 5,
@@ -65,7 +130,8 @@ export default function ServicesPage() {
           description: "Hand-painted highlights for a natural look",
           price: 200,
           duration: 180,
-          popular: true
+          popular: true,
+          categoryId: 2
         },
         {
           id: 6,
@@ -73,11 +139,92 @@ export default function ServicesPage() {
           description: "Traditional foil highlights",
           price: 150,
           duration: 150,
-          popular: false
+          popular: false,
+          categoryId: 2
         }
       ]
     }
-  ];
+  ]);
+
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingService, setEditingService] = useState<Service | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+
+  // Form state
+  const [formData, setFormData] = useState({
+    name: "",
+    description: "",
+    price: "",
+    duration: ""
+  });
+
+  const handleAddService = () => {
+    setFormData({ name: "", description: "", price: "", duration: "" });
+    setIsAddModalOpen(true);
+  };
+
+  const handleEditService = (service: Service) => {
+    setEditingService(service);
+    setFormData({
+      name: service.name,
+      description: service.description,
+      price: service.price.toString(),
+      duration: service.duration.toString()
+    });
+    setIsEditModalOpen(true);
+    setOpenMenuId(null);
+  };
+
+  const handleSubmitAdd = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Add to the first category by default
+    const updatedCategories = [...serviceCategories];
+    const firstCategory = updatedCategories[0];
+
+    const newService: Service = {
+      id: Date.now(),
+      name: formData.name,
+      description: formData.description,
+      price: Number(formData.price),
+      duration: Number(formData.duration),
+      popular: false,
+      categoryId: firstCategory.id
+    };
+
+    firstCategory.services.push(newService);
+    firstCategory.count = firstCategory.services.length;
+
+    setServiceCategories(updatedCategories);
+    setIsAddModalOpen(false);
+    setFormData({ name: "", description: "", price: "", duration: "" });
+  };
+
+  const handleSubmitEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingService) {
+      const updatedCategories = serviceCategories.map(category => ({
+        ...category,
+        services: category.services.map(service =>
+          service.id === editingService.id
+            ? {
+                ...service,
+                name: formData.name,
+                description: formData.description,
+                price: Number(formData.price),
+                duration: Number(formData.duration)
+              }
+            : service
+        )
+      }));
+
+      setServiceCategories(updatedCategories);
+      setIsEditModalOpen(false);
+      setEditingService(null);
+      setFormData({ name: "", description: "", price: "", duration: "" });
+    }
+  };
 
   return (
     <>
@@ -132,6 +279,7 @@ export default function ServicesPage() {
             </div>
 
             <button
+              onClick={handleAddService}
               className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold rounded-lg transition-colors flex items-center gap-2"
               style={{ padding: `${spacing}px ${cardPadding * 1.5}px`, fontSize: `${responsive.fontSize.body}px` }}
             >
@@ -180,15 +328,46 @@ export default function ServicesPage() {
                       style={{ padding: `${cardPadding * 1.5}px` }}
                     >
                       <div className="flex items-start justify-between" style={{ marginBottom: `${spacing / 2}px` }}>
-                        <h3 className="font-bold" style={{ fontSize: `${responsive.fontSize.body}px` }}>{service.name}</h3>
-                        {service.popular && (
-                          <span
-                            className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded"
-                            style={{ fontSize: `${responsive.fontSize.small}px` }}
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-bold" style={{ fontSize: `${responsive.fontSize.body}px` }}>{service.name}</h3>
+                          {service.popular && (
+                            <span
+                              className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded"
+                              style={{ fontSize: `${responsive.fontSize.small}px` }}
+                            >
+                              Popular
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="relative">
+                          <button
+                            className="text-zinc-400 hover:text-white"
+                            onClick={() => setOpenMenuId(openMenuId === service.id ? null : service.id)}
                           >
-                            Popular
-                          </span>
-                        )}
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                            </svg>
+                          </button>
+
+                          {openMenuId === service.id && (
+                            <div
+                              className="absolute right-0 mt-2 w-48 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl z-10"
+                              style={{ padding: `${spacing / 2}px` }}
+                            >
+                              <button
+                                onClick={() => handleEditService(service)}
+                                className="w-full text-left px-3 py-2 hover:bg-zinc-700 rounded flex items-center gap-2 text-white"
+                                style={{ fontSize: `${responsive.fontSize.body}px` }}
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                                Edit Service
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       <p className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.small}px`, marginBottom: `${spacing}px` }}>
@@ -201,7 +380,7 @@ export default function ServicesPage() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                           <span className="text-yellow-400 font-semibold" style={{ fontSize: `${responsive.fontSize.body}px` }}>
-                            ${service.price}
+                            Rs {service.price}
                           </span>
                         </div>
 
@@ -220,6 +399,174 @@ export default function ServicesPage() {
           </div>
         </div>
       </div>
+
+      {/* Add Service Modal */}
+      <Modal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        title="Add New Service"
+        subtitle="Create a new service for your menu."
+        cardPadding={cardPadding}
+        spacing={spacing}
+        responsiveFontSize={responsive.fontSize}
+      >
+        <form onSubmit={handleSubmitAdd} style={{ display: 'flex', flexDirection: 'column', gap: `${spacing}px` }}>
+          <div>
+            <label className="block text-white font-medium" style={{ fontSize: `${responsive.fontSize.label}px`, marginBottom: '8px' }}>
+              Service Name
+            </label>
+            <input
+              type="text"
+              placeholder="Enter service name"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              required
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500"
+              style={{ padding: `${spacing}px ${cardPadding}px`, fontSize: `${responsive.fontSize.body}px` }}
+            />
+          </div>
+
+          <div>
+            <label className="block text-white font-medium" style={{ fontSize: `${responsive.fontSize.label}px`, marginBottom: '8px' }}>
+              Description
+            </label>
+            <textarea
+              placeholder="Describe the service..."
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              required
+              rows={3}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500"
+              style={{ padding: `${spacing}px ${cardPadding}px`, fontSize: `${responsive.fontSize.body}px` }}
+            />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: `${spacing}px` }}>
+            <div>
+              <label className="block text-white font-medium" style={{ fontSize: `${responsive.fontSize.label}px`, marginBottom: '8px' }}>
+                Price (Rs)
+              </label>
+              <input
+                type="number"
+                placeholder="0"
+                value={formData.price}
+                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                required
+                min="0"
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500"
+                style={{ padding: `${spacing}px ${cardPadding}px`, fontSize: `${responsive.fontSize.body}px` }}
+              />
+            </div>
+
+            <div>
+              <label className="block text-white font-medium" style={{ fontSize: `${responsive.fontSize.label}px`, marginBottom: '8px' }}>
+                Duration
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. 45 min"
+                value={formData.duration}
+                onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+                required
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500"
+                style={{ padding: `${spacing}px ${cardPadding}px`, fontSize: `${responsive.fontSize.body}px` }}
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-semibold rounded-lg transition-colors"
+            style={{ padding: `${spacing}px`, fontSize: `${responsive.fontSize.body}px` }}
+          >
+            Add Service
+          </button>
+        </form>
+      </Modal>
+
+      {/* Edit Service Modal */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        title="Edit Service"
+        subtitle="Update service details."
+        cardPadding={cardPadding}
+        spacing={spacing}
+        responsiveFontSize={responsive.fontSize}
+      >
+        <form onSubmit={handleSubmitEdit} style={{ display: 'flex', flexDirection: 'column', gap: `${spacing}px` }}>
+          <div>
+            <label className="block text-white font-medium" style={{ fontSize: `${responsive.fontSize.label}px`, marginBottom: '8px' }}>
+              Service Name
+            </label>
+            <input
+              type="text"
+              placeholder="Enter service name"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              required
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500"
+              style={{ padding: `${spacing}px ${cardPadding}px`, fontSize: `${responsive.fontSize.body}px` }}
+            />
+          </div>
+
+          <div>
+            <label className="block text-white font-medium" style={{ fontSize: `${responsive.fontSize.label}px`, marginBottom: '8px' }}>
+              Description
+            </label>
+            <textarea
+              placeholder="Describe the service..."
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              required
+              rows={3}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500"
+              style={{ padding: `${spacing}px ${cardPadding}px`, fontSize: `${responsive.fontSize.body}px` }}
+            />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: `${spacing}px` }}>
+            <div>
+              <label className="block text-white font-medium" style={{ fontSize: `${responsive.fontSize.label}px`, marginBottom: '8px' }}>
+                Price (Rs)
+              </label>
+              <input
+                type="number"
+                placeholder="0"
+                value={formData.price}
+                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                required
+                min="0"
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500"
+                style={{ padding: `${spacing}px ${cardPadding}px`, fontSize: `${responsive.fontSize.body}px` }}
+              />
+            </div>
+
+            <div>
+              <label className="block text-white font-medium" style={{ fontSize: `${responsive.fontSize.label}px`, marginBottom: '8px' }}>
+                Duration
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. 45 min"
+                value={formData.duration}
+                onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+                required
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500"
+                style={{ padding: `${spacing}px ${cardPadding}px`, fontSize: `${responsive.fontSize.body}px` }}
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-semibold rounded-lg transition-colors"
+            style={{ padding: `${spacing}px`, fontSize: `${responsive.fontSize.body}px` }}
+          >
+            Save Changes
+          </button>
+        </form>
+      </Modal>
     </>
   );
 }
