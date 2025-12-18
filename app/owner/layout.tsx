@@ -5,10 +5,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useScreenSize, getResponsiveValues } from "@/app/hooks/useScreenSize";
+import { useAuth } from "@/app/context/AuthContext";
+import ProtectedRoute from "@/app/components/ProtectedRoute";
 
 export default function OwnerLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { logout } = useAuth();
   const { width, height } = useScreenSize();
 
   const responsive = getResponsiveValues(width, height);
@@ -32,11 +35,13 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
   ];
 
   const handleLogout = () => {
+    logout();
     router.push("/login");
   };
 
   return (
-    <div className="h-screen bg-black text-white overflow-hidden flex flex-col">
+    <ProtectedRoute>
+      <div className="h-screen bg-black text-white overflow-hidden flex flex-col">
       {/* Mobile overlay */}
       {isMenuOpen && !isDesktop && (
         <div
@@ -150,6 +155,7 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
           {children}
         </div>
       </div>
-    </div>
+      </div>
+    </ProtectedRoute>
   );
 }

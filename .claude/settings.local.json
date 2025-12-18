@@ -4,7 +4,9 @@
       "Bash(mkdir:*)",
       "Bash(bun run lint)",
       "Bash(bun run build:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "WebSearch",
+      "Bash(npm init:*)"
     ],
     "deny": [],
     "ask": []
