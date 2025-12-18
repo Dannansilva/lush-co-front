@@ -6,7 +6,8 @@
       "Bash(bun run build:*)",
       "Bash(rm:*)",
       "WebSearch",
-      "Bash(npm init:*)"
+      "Bash(npm init:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

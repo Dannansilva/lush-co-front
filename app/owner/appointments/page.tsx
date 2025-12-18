@@ -2,6 +2,15 @@
 
 import React, { useState } from "react";
 import { useScreenSize, getResponsiveValues } from "@/app/hooks/useScreenSize";
+import {
+  getWeekStart,
+  navigateWeek,
+  formatTimeToString,
+  Appointment,
+} from "@/app/utils/calendarUtils";
+import CalendarGrid from "@/app/components/calendar/CalendarGrid";
+import WeekNavigator from "@/app/components/calendar/WeekNavigator";
+import AppointmentSlidePanel from "@/app/components/calendar/AppointmentSlidePanel";
 
 export default function AppointmentsPage() {
   const { width, height } = useScreenSize();
@@ -12,15 +21,24 @@ export default function AppointmentsPage() {
 
   const isMobile = width < 768;
 
-  const [filter, setFilter] = useState("all");
+  // Week navigation state
+  const [currentWeekStart, setCurrentWeekStart] = useState(() =>
+    getWeekStart(new Date())
+  );
 
-  const appointments = [
+  // Panel state
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<{ date: Date; time: string } | null>(null);
+
+  // Mock appointments data
+  const [appointments, setAppointments] = useState<Appointment[]>([
     {
       id: 1,
       clientName: "Jennifer Adams",
       staffName: "Emma Wilson",
       service: "Balayage + Cut",
-      date: "2025-12-10",
+      date: "2025-12-16",
       time: "9:00 AM",
       duration: 120,
       price: 285,
@@ -32,7 +50,7 @@ export default function AppointmentsPage() {
       clientName: "Rachel Green",
       staffName: "Mia Rodriguez",
       service: "Bridal Styling",
-      date: "2025-12-10",
+      date: "2025-12-17",
       time: "10:30 AM",
       duration: 90,
       price: 150,
@@ -44,7 +62,7 @@ export default function AppointmentsPage() {
       clientName: "Monica Bell",
       staffName: "Emma Wilson",
       service: "Full Color",
-      date: "2025-12-10",
+      date: "2025-12-18",
       time: "1:00 PM",
       duration: 120,
       price: 120,
@@ -56,7 +74,7 @@ export default function AppointmentsPage() {
       clientName: "Sarah Johnson",
       staffName: "Olivia Kim",
       service: "Precision Cut",
-      date: "2025-12-10",
+      date: "2025-12-19",
       time: "2:30 PM",
       duration: 45,
       price: 85,
@@ -68,19 +86,63 @@ export default function AppointmentsPage() {
       clientName: "Lisa Brown",
       staffName: "Sophia Lee",
       service: "Gel Manicure",
-      date: "2025-12-10",
+      date: "2025-12-20",
       time: "3:00 PM",
       duration: 60,
       price: 45,
       status: "cancelled",
       phone: "(555) 567-8901"
     }
-  ];
+  ]);
 
-  const filteredAppointments = appointments.filter(apt => {
-    if (filter === "all") return true;
-    return apt.status === filter;
-  });
+  // Handlers
+  const handlePreviousWeek = () => {
+    setCurrentWeekStart((prev) => navigateWeek(prev, -1));
+  };
+
+  const handleNextWeek = () => {
+    setCurrentWeekStart((prev) => navigateWeek(prev, 1));
+  };
+
+  const handleCellClick = (date: Date, hour: number, minutes: number) => {
+    // Create new appointment
+    setSelectedAppointment(null);
+    setSelectedSlot({
+      date,
+      time: formatTimeToString(hour, minutes),
+    });
+    setIsPanelOpen(true);
+  };
+
+  const handleDateNavigatorSelect = (weekStart: Date) => {
+    setCurrentWeekStart(weekStart);
+  };
+
+  const handleAppointmentClick = (appointment: Appointment) => {
+    // Edit existing appointment
+    setSelectedAppointment(appointment);
+    setSelectedSlot(null);
+    setIsPanelOpen(true);
+  };
+
+  const handleSaveAppointment = (appointment: Appointment) => {
+    if (selectedAppointment) {
+      // Update existing appointment
+      setAppointments((prev) =>
+        prev.map((apt) => (apt.id === appointment.id ? appointment : apt))
+      );
+    } else {
+      // Add new appointment
+      setAppointments((prev) => [...prev, appointment]);
+    }
+    setIsPanelOpen(false);
+  };
+
+  const handleClosePanel = () => {
+    setIsPanelOpen(false);
+    setSelectedAppointment(null);
+    setSelectedSlot(null);
+  };
 
   const stats = {
     total: appointments.length,
@@ -148,97 +210,33 @@ export default function AppointmentsPage() {
             </div>
           </div>
 
-          {/* Filters */}
-          <div className="flex items-center gap-3" style={{ marginBottom: `${spacing}px` }}>
-            <button
-              onClick={() => setFilter("all")}
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                filter === "all" ? "bg-yellow-400 text-black" : "bg-zinc-900 text-zinc-400 hover:bg-zinc-800"
-              }`}
-              style={{ fontSize: `${responsive.fontSize.body}px` }}
-            >
-              All
-            </button>
-            <button
-              onClick={() => setFilter("confirmed")}
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                filter === "confirmed" ? "bg-yellow-400 text-black" : "bg-zinc-900 text-zinc-400 hover:bg-zinc-800"
-              }`}
-              style={{ fontSize: `${responsive.fontSize.body}px` }}
-            >
-              Confirmed
-            </button>
-            <button
-              onClick={() => setFilter("pending")}
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                filter === "pending" ? "bg-yellow-400 text-black" : "bg-zinc-900 text-zinc-400 hover:bg-zinc-800"
-              }`}
-              style={{ fontSize: `${responsive.fontSize.body}px` }}
-            >
-              Pending
-            </button>
-            <button
-              onClick={() => setFilter("cancelled")}
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                filter === "cancelled" ? "bg-yellow-400 text-black" : "bg-zinc-900 text-zinc-400 hover:bg-zinc-800"
-              }`}
-              style={{ fontSize: `${responsive.fontSize.body}px` }}
-            >
-              Cancelled
-            </button>
-          </div>
+          {/* Week Navigator */}
+          <WeekNavigator
+            currentWeekStart={currentWeekStart}
+            onPrevious={handlePreviousWeek}
+            onNext={handleNextWeek}
+            onDateSelect={handleDateNavigatorSelect}
+          />
 
-          {/* Appointments Table */}
-          <div className="bg-zinc-900 rounded-xl border border-zinc-800 overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-zinc-800/50 border-b border-zinc-800">
-                <tr>
-                  <th className="text-left text-zinc-400" style={{ padding: `${spacing}px ${cardPadding}px`, fontSize: `${responsive.fontSize.small}px` }}>Client</th>
-                  <th className="text-left text-zinc-400" style={{ padding: `${spacing}px ${cardPadding}px`, fontSize: `${responsive.fontSize.small}px` }}>Staff</th>
-                  <th className="text-left text-zinc-400" style={{ padding: `${spacing}px ${cardPadding}px`, fontSize: `${responsive.fontSize.small}px` }}>Service</th>
-                  <th className="text-left text-zinc-400" style={{ padding: `${spacing}px ${cardPadding}px`, fontSize: `${responsive.fontSize.small}px` }}>Date & Time</th>
-                  <th className="text-left text-zinc-400" style={{ padding: `${spacing}px ${cardPadding}px`, fontSize: `${responsive.fontSize.small}px` }}>Price</th>
-                  <th className="text-left text-zinc-400" style={{ padding: `${spacing}px ${cardPadding}px`, fontSize: `${responsive.fontSize.small}px` }}>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredAppointments.map((apt) => (
-                  <tr key={apt.id} className="border-b border-zinc-800 hover:bg-zinc-800/30 transition-colors">
-                    <td style={{ padding: `${spacing}px ${cardPadding}px` }}>
-                      <div className="font-semibold" style={{ fontSize: `${responsive.fontSize.body}px` }}>{apt.clientName}</div>
-                      <div className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.small}px` }}>{apt.phone}</div>
-                    </td>
-                    <td style={{ padding: `${spacing}px ${cardPadding}px`, fontSize: `${responsive.fontSize.body}px` }}>{apt.staffName}</td>
-                    <td style={{ padding: `${spacing}px ${cardPadding}px` }}>
-                      <div style={{ fontSize: `${responsive.fontSize.body}px` }}>{apt.service}</div>
-                      <div className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.small}px` }}>{apt.duration} min</div>
-                    </td>
-                    <td style={{ padding: `${spacing}px ${cardPadding}px` }}>
-                      <div style={{ fontSize: `${responsive.fontSize.body}px` }}>{apt.date}</div>
-                      <div className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.small}px` }}>{apt.time}</div>
-                    </td>
-                    <td className="text-yellow-400 font-semibold" style={{ padding: `${spacing}px ${cardPadding}px`, fontSize: `${responsive.fontSize.body}px` }}>
-                      ${apt.price}
-                    </td>
-                    <td style={{ padding: `${spacing}px ${cardPadding}px` }}>
-                      <span
-                        className={`px-3 py-1 rounded-full ${
-                          apt.status === "confirmed" ? "bg-green-500/20 text-green-400" :
-                          apt.status === "pending" ? "bg-orange-500/20 text-orange-400" :
-                          "bg-red-500/20 text-red-400"
-                        }`}
-                        style={{ fontSize: `${responsive.fontSize.small}px` }}
-                      >
-                        {apt.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {/* Calendar Grid */}
+          <CalendarGrid
+            weekStart={currentWeekStart}
+            appointments={appointments}
+            onCellClick={handleCellClick}
+            onAppointmentClick={handleAppointmentClick}
+          />
         </div>
       </div>
+
+      {/* Slide-in Panel */}
+      <AppointmentSlidePanel
+        isOpen={isPanelOpen}
+        onClose={handleClosePanel}
+        appointment={selectedAppointment}
+        selectedDate={selectedSlot?.date}
+        selectedTime={selectedSlot?.time}
+        onSave={handleSaveAppointment}
+      />
     </>
   );
 }
