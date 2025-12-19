@@ -11,6 +11,7 @@ import {
 import CalendarGrid from "@/app/components/calendar/CalendarGrid";
 import WeekNavigator from "@/app/components/calendar/WeekNavigator";
 import AppointmentSlidePanel from "@/app/components/calendar/AppointmentSlidePanel";
+import AllAppointmentsView from "@/app/components/calendar/AllAppointmentsView";
 
 export default function AppointmentsPage() {
   const { width, height } = useScreenSize();
@@ -25,6 +26,9 @@ export default function AppointmentsPage() {
   const [currentWeekStart, setCurrentWeekStart] = useState(() =>
     getWeekStart(new Date())
   );
+
+  // View state
+  const [showAllAppointments, setShowAllAppointments] = useState(false);
 
   // Panel state
   const [isPanelOpen, setIsPanelOpen] = useState(false);
@@ -144,6 +148,10 @@ export default function AppointmentsPage() {
     setSelectedSlot(null);
   };
 
+  const handleToggleView = () => {
+    setShowAllAppointments((prev) => !prev);
+  };
+
   const stats = {
     total: appointments.length,
     confirmed: appointments.filter(a => a.status === "confirmed").length,
@@ -216,15 +224,24 @@ export default function AppointmentsPage() {
             onPrevious={handlePreviousWeek}
             onNext={handleNextWeek}
             onDateSelect={handleDateNavigatorSelect}
+            onViewAllAppointments={handleToggleView}
+            showAllAppointments={showAllAppointments}
           />
 
-          {/* Calendar Grid */}
-          <CalendarGrid
-            weekStart={currentWeekStart}
-            appointments={appointments}
-            onCellClick={handleCellClick}
-            onAppointmentClick={handleAppointmentClick}
-          />
+          {/* Conditional View */}
+          {showAllAppointments ? (
+            <AllAppointmentsView
+              appointments={appointments}
+              onAppointmentClick={handleAppointmentClick}
+            />
+          ) : (
+            <CalendarGrid
+              weekStart={currentWeekStart}
+              appointments={appointments}
+              onCellClick={handleCellClick}
+              onAppointmentClick={handleAppointmentClick}
+            />
+          )}
         </div>
       </div>
 

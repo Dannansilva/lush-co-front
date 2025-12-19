@@ -10,6 +10,8 @@ interface WeekNavigatorProps {
   onPrevious: () => void;
   onNext: () => void;
   onDateSelect: (weekStart: Date) => void;
+  onViewAllAppointments: () => void;
+  showAllAppointments: boolean;
 }
 
 export default function WeekNavigator({
@@ -17,6 +19,8 @@ export default function WeekNavigator({
   onPrevious,
   onNext,
   onDateSelect,
+  onViewAllAppointments,
+  showAllAppointments,
 }: WeekNavigatorProps) {
   const { width, height } = useScreenSize();
   const responsive = getResponsiveValues(width, height);
@@ -38,9 +42,24 @@ export default function WeekNavigator({
   return (
     <>
       <div
-        className="flex items-center justify-end"
+        className="flex items-center justify-between"
         style={{ marginBottom: `${spacing}px` }}
       >
+        {/* All Appointments Button */}
+        <button
+          onClick={onViewAllAppointments}
+          className={`${
+            showAllAppointments
+              ? 'bg-yellow-400 text-black hover:bg-yellow-500'
+              : 'bg-zinc-900 hover:bg-zinc-800 text-white'
+          } border border-zinc-800 rounded-md px-3 py-1 transition-colors font-medium`}
+          style={{ fontSize: `${responsive.fontSize.small}px` }}
+        >
+          <span className="text-xs whitespace-nowrap">
+            {showAllAppointments ? 'Calendar View' : 'All Appointments'}
+          </span>
+        </button>
+
         {/* Navigation Buttons */}
         <div className="flex items-center gap-1">
           <button
