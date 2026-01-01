@@ -3,6 +3,7 @@
 import React from "react";
 import { useScreenSize, getResponsiveValues } from "@/app/hooks/useScreenSize";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import UserProfile from "@/app/components/UserProfile";
 
 export default function RevenuePage() {
   const { width, height } = useScreenSize();
@@ -90,26 +91,7 @@ export default function RevenuePage() {
         </div>
 
         {/* User Profile */}
-        <div className="flex items-center gap-3">
-          <input
-            type="text"
-            placeholder="Search..."
-            className="bg-zinc-900 border border-zinc-800 rounded-lg text-white placeholder-zinc-500"
-            style={{ padding: `${spacing / 2}px ${cardPadding}px`, fontSize: `${responsive.fontSize.body}px`, width: '200px' }}
-          />
-          <div className="relative">
-            <div className="w-10 h-10 bg-yellow-400 rounded-full flex items-center justify-center text-black font-bold">
-              VS
-            </div>
-            <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-black"></div>
-          </div>
-          {!isMobile && (
-            <div>
-              <div className="font-semibold" style={{ fontSize: `${responsive.fontSize.body}px` }}>Victoria Sterling</div>
-              <div className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.small}px` }}>Owner</div>
-            </div>
-          )}
-        </div>
+        <UserProfile showSearch={true} />
       </div>
 
       {/* Content */}

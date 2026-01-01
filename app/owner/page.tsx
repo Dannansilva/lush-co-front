@@ -2,16 +2,25 @@
 
 import React from "react";
 import { useScreenSize, getResponsiveValues, getResponsiveFontSize } from "@/app/hooks/useScreenSize";
+import { useAuth } from "@/app/context/AuthContext";
+import UserProfile from "@/app/components/UserProfile";
 
 export default function OwnerDashboard() {
   const { width, height } = useScreenSize();
   const responsive = getResponsiveValues(width, height);
+  const { user } = useAuth();
 
   const statCardSize = getResponsiveFontSize(width, 24, 32);
   const cardPadding = Math.max(12, Math.min(width * 0.015, 20));
   const spacing = Math.max(12, Math.min(width * 0.02, 16));
 
   const isMobile = width < 768;
+
+  // Get first name for greeting
+  const getFirstName = () => {
+    if (!user?.name) return "User";
+    return user.name.split(" ")[0];
+  };
 
   // Sample data
   const appointments = [
@@ -91,25 +100,14 @@ export default function OwnerDashboard() {
         <div className="flex items-center gap-4">
           <div>
             <h1 className="font-bold" style={{ fontSize: `${responsive.fontSize.heading}px` }}>Dashboard</h1>
-            <p className="text-yellow-400" style={{ fontSize: `${responsive.fontSize.body}px` }}>Good morning, Emma. Here&apos;s today&apos;s overview.</p>
+            <p className="text-yellow-400" style={{ fontSize: `${responsive.fontSize.body}px` }}>
+              Good morning, {getFirstName()}. Here&apos;s today&apos;s overview.
+            </p>
           </div>
         </div>
 
         {/* User Profile */}
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <div className="w-10 h-10 bg-yellow-400 rounded-full flex items-center justify-center text-black font-bold">
-              ED
-            </div>
-            <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-black"></div>
-          </div>
-          {!isMobile && (
-            <div>
-              <div className="font-semibold" style={{ fontSize: `${responsive.fontSize.body}px` }}>Emma Davis</div>
-              <div className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.small}px` }}>Front Desk</div>
-            </div>
-          )}
-        </div>
+        <UserProfile showSearch={false} />
       </div>
 
       {/* Scrollable Content Area */}
