@@ -9,26 +9,30 @@ import {
 } from '@/app/utils/calendarUtils';
 import AppointmentCard from './AppointmentCard';
 
-interface DayColumnProps {
+interface StaffColumnProps {
+  staffId: string;
+  staffName: string;
   date: Date;
   hour: number;
   appointments: Appointment[];
   cellHeight: number;
-  onClick: (minuteOffset: number) => void;
+  onClick: (staffId: string, staffName: string, minuteOffset: number) => void;
   onAppointmentClick: (appointment: Appointment) => void;
 }
 
-export default function DayColumn({
+export default function StaffColumn({
+  staffId,
+  staffName,
   date,
   hour,
   appointments,
   cellHeight,
   onClick,
   onAppointmentClick,
-}: DayColumnProps) {
-  // Filter appointments for this specific day
-  const dayAppointments = appointments.filter((apt) =>
-    isAppointmentOnDate(apt, date)
+}: StaffColumnProps) {
+  // Filter appointments for this specific staff member and date
+  const staffAppointments = appointments.filter(
+    (apt) => apt.staffName === staffName && isAppointmentOnDate(apt, date)
   );
 
   // Calculate quarter heights (15-minute slots)
@@ -36,7 +40,7 @@ export default function DayColumn({
 
   const handleQuarterClick = (e: React.MouseEvent, minutes: number) => {
     e.stopPropagation();
-    onClick(minutes);
+    onClick(staffId, staffName, minutes);
   };
 
   return (
@@ -63,7 +67,7 @@ export default function DayColumn({
 
       {/* Only render appointments in the first hour cell to avoid duplicates */}
       {hour === 9 &&
-        dayAppointments.map((appointment) => {
+        staffAppointments.map((appointment) => {
           const position = calculateAppointmentPosition(
             appointment.time,
             appointment.duration,

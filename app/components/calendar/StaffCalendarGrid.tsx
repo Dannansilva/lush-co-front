@@ -3,34 +3,38 @@
 import React from 'react';
 import { useScreenSize, getResponsiveValues } from '@/app/hooks/useScreenSize';
 import {
-  getWeekDates,
-  getDayName,
   formatDate,
-  isToday,
   Appointment,
   CALENDAR_START_HOUR,
   TOTAL_HOURS,
 } from '@/app/utils/calendarUtils';
 import TimeColumn from './TimeColumn';
-import DayColumn from './DayColumn';
+import StaffColumn from './StaffColumn';
 
-interface CalendarGridProps {
-  weekStart: Date;
+interface StaffMember {
+  _id: string;
+  name: string;
+  phoneNumber: string;
+}
+
+interface StaffCalendarGridProps {
+  selectedDate: Date;
+  staffMembers: StaffMember[];
   appointments: Appointment[];
-  onCellClick: (date: Date, hour: number, minutes: number) => void;
+  onCellClick: (staffId: string, staffName: string, date: Date, hour: number, minutes: number) => void;
   onAppointmentClick: (appointment: Appointment) => void;
 }
 
-export default function CalendarGrid({
-  weekStart,
+export default function StaffCalendarGrid({
+  selectedDate,
+  staffMembers,
   appointments,
   onCellClick,
   onAppointmentClick,
-}: CalendarGridProps) {
+}: StaffCalendarGridProps) {
   const { width, height } = useScreenSize();
   const responsive = getResponsiveValues(width, height);
 
-  const weekDates = getWeekDates(weekStart);
   const hours = Array.from(
     { length: TOTAL_HOURS },
     (_, i) => CALENDAR_START_HOUR + i
@@ -38,45 +42,52 @@ export default function CalendarGrid({
 
   // Calculate responsive dimensions
   const timeColumnWidth = responsive.device.isMobile ? 50 : 80;
-  const availableWidth = width - timeColumnWidth - responsive.padding.horizontal * 2;
-  const dayColumnWidth = Math.max(60, availableWidth / 7);
+  const staffCount = staffMembers.length || 1;
 
   // Larger hour cell height for better visibility
   // Each hour cell should be 80-100px for comfortable viewing
   const hourCellHeight = responsive.device.isMobile ? 80 : 100;
 
+  // Create equal-width columns using 1fr for each staff member
+  const staffColumns = Array(staffCount).fill('1fr').join(' ');
+
   return (
     <div className="flex-1 overflow-auto">
       <div
-        className="inline-grid bg-zinc-800 rounded-lg overflow-hidden"
+        className="grid bg-zinc-800 rounded-lg overflow-hidden"
         style={{
-          gridTemplateColumns: `${timeColumnWidth}px repeat(7, ${dayColumnWidth}px)`,
+          gridTemplateColumns: `${timeColumnWidth}px ${staffColumns}`,
           gridTemplateRows: `60px repeat(${TOTAL_HOURS}, ${hourCellHeight}px)`,
           gap: '1px',
-          minWidth: '100%',
+          width: '100%',
         }}
       >
         {/* Header row */}
-        <div className="bg-zinc-900 border-b border-zinc-800" />
-        {weekDates.map((date) => (
+        <div className="bg-zinc-900 border-b border-zinc-800 flex items-center justify-center">
           <div
-            key={date.toString()}
-            className={`bg-zinc-900 border-b border-zinc-800 flex flex-col items-center justify-center ${
-              isToday(date) ? 'bg-yellow-400/10' : ''
-            }`}
+            className="text-zinc-400 font-semibold"
+            style={{ fontSize: `${responsive.fontSize.small}px` }}
+          >
+            {formatDate(selectedDate)}
+          </div>
+        </div>
+        {staffMembers.map((staff) => (
+          <div
+            key={staff._id}
+            className="bg-zinc-900 border-b border-zinc-800 flex flex-col items-center justify-center"
             style={{ padding: `${responsive.spacing.gap}px` }}
           >
             <div
-              className={`font-semibold ${isToday(date) ? 'text-yellow-400' : 'text-white'}`}
+              className="font-semibold text-white text-center"
               style={{ fontSize: `${responsive.fontSize.body}px` }}
             >
-              {getDayName(date)}
+              {staff.name}
             </div>
             <div
-              className={`${isToday(date) ? 'text-yellow-400' : 'text-zinc-400'}`}
+              className="text-zinc-400 text-center"
               style={{ fontSize: `${responsive.fontSize.small}px` }}
             >
-              {formatDate(date)}
+              {staff.phoneNumber}
             </div>
           </div>
         ))}
@@ -85,14 +96,18 @@ export default function CalendarGrid({
         {hours.map((hour) => (
           <React.Fragment key={hour}>
             <TimeColumn hour={hour} />
-            {weekDates.map((date) => (
-              <DayColumn
-                key={`${date.toISOString()}-${hour}`}
-                date={date}
+            {staffMembers.map((staff) => (
+              <StaffColumn
+                key={`${staff._id}-${hour}`}
+                staffId={staff._id}
+                staffName={staff.name}
+                date={selectedDate}
                 hour={hour}
                 appointments={appointments}
                 cellHeight={hourCellHeight}
-                onClick={(minutes) => onCellClick(date, hour, minutes)}
+                onClick={(staffId, staffName, minutes) =>
+                  onCellClick(staffId, staffName, selectedDate, hour, minutes)
+                }
                 onAppointmentClick={onAppointmentClick}
               />
             ))}

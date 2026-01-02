@@ -1,18 +1,22 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useScreenSize, getResponsiveValues } from "@/app/hooks/useScreenSize";
 import {
-  getWeekStart,
-  navigateWeek,
   formatTimeToString,
   Appointment,
 } from "@/app/utils/calendarUtils";
-import CalendarGrid from "@/app/components/calendar/CalendarGrid";
-import WeekNavigator from "@/app/components/calendar/WeekNavigator";
+import StaffCalendarGrid from "@/app/components/calendar/StaffCalendarGrid";
 import AppointmentSlidePanel from "@/app/components/calendar/AppointmentSlidePanel";
 import AllAppointmentsView from "@/app/components/calendar/AllAppointmentsView";
 import UserProfile from "@/app/components/UserProfile";
+import { apiGet } from "@/app/utils/api";
+
+interface StaffMember {
+  _id: string;
+  name: string;
+  phoneNumber: string;
+}
 
 export default function AppointmentsPage() {
   const { width, height } = useScreenSize();
@@ -23,18 +27,36 @@ export default function AppointmentsPage() {
 
   const isMobile = width < 768;
 
-  // Week navigation state
-  const [currentWeekStart, setCurrentWeekStart] = useState(() =>
-    getWeekStart(new Date())
-  );
-
   // View state
   const [showAllAppointments, setShowAllAppointments] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+
+  // Staff state
+  const [staff, setStaff] = useState<StaffMember[]>([]);
+  const [loadingStaff, setLoadingStaff] = useState(true);
 
   // Panel state
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
-  const [selectedSlot, setSelectedSlot] = useState<{ date: Date; time: string } | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<{
+    date: Date;
+    time: string;
+    staffId?: string;
+    staffName?: string;
+  } | null>(null);
+
+  // Fetch staff members from API
+  useEffect(() => {
+    const fetchStaff = async () => {
+      setLoadingStaff(true);
+      const response = await apiGet<StaffMember[]>('/staff');
+      if (response.success && response.data) {
+        setStaff(response.data);
+      }
+      setLoadingStaff(false);
+    };
+    fetchStaff();
+  }, []);
 
   // Mock appointments data
   const [appointments, setAppointments] = useState<Appointment[]>([
@@ -101,26 +123,22 @@ export default function AppointmentsPage() {
   ]);
 
   // Handlers
-  const handlePreviousWeek = () => {
-    setCurrentWeekStart((prev) => navigateWeek(prev, -1));
-  };
-
-  const handleNextWeek = () => {
-    setCurrentWeekStart((prev) => navigateWeek(prev, 1));
-  };
-
-  const handleCellClick = (date: Date, hour: number, minutes: number) => {
-    // Create new appointment
+  const handleStaffCellClick = (
+    staffId: string,
+    staffName: string,
+    date: Date,
+    hour: number,
+    minutes: number
+  ) => {
+    // Create new appointment for specific staff member
     setSelectedAppointment(null);
     setSelectedSlot({
       date,
       time: formatTimeToString(hour, minutes),
+      staffId,
+      staffName,
     });
     setIsPanelOpen(true);
-  };
-
-  const handleDateNavigatorSelect = (weekStart: Date) => {
-    setCurrentWeekStart(weekStart);
   };
 
   const handleAppointmentClick = (appointment: Appointment) => {
@@ -151,6 +169,27 @@ export default function AppointmentsPage() {
 
   const handleToggleView = () => {
     setShowAllAppointments((prev) => !prev);
+  };
+
+  const handlePreviousDay = () => {
+    setSelectedDate((prev) => {
+      const newDate = new Date(prev);
+      newDate.setDate(newDate.getDate() - 1);
+      return newDate;
+    });
+  };
+
+  const handleNextDay = () => {
+    setSelectedDate((prev) => {
+      const newDate = new Date(prev);
+      newDate.setDate(newDate.getDate() + 1);
+      return newDate;
+    });
+  };
+
+  const handleDateSelect = (dateString: string) => {
+    const newDate = new Date(dateString);
+    setSelectedDate(newDate);
   };
 
   const stats = {
@@ -206,15 +245,57 @@ export default function AppointmentsPage() {
             </div>
           </div>
 
-          {/* Week Navigator */}
-          <WeekNavigator
-            currentWeekStart={currentWeekStart}
-            onPrevious={handlePreviousWeek}
-            onNext={handleNextWeek}
-            onDateSelect={handleDateNavigatorSelect}
-            onViewAllAppointments={handleToggleView}
-            showAllAppointments={showAllAppointments}
-          />
+          {/* Date Navigator with View All Bookings Button */}
+          <div className="flex items-center justify-between gap-3" style={{ marginBottom: `${spacing}px` }}>
+            <div className="flex items-center justify-between bg-zinc-900 rounded-lg border border-zinc-800 flex-1" style={{ padding: `${spacing}px ${cardPadding}px` }}>
+              <button
+                onClick={handlePreviousDay}
+                className="text-zinc-400 hover:text-white transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <div className="text-center flex items-center gap-3">
+                <div className="font-bold text-white" style={{ fontSize: `${responsive.fontSize.body}px` }}>
+                  {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                </div>
+                <div className="relative">
+                  <input
+                    type="date"
+                    value={selectedDate.toISOString().split('T')[0]}
+                    onChange={(e) => handleDateSelect(e.target.value)}
+                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                  />
+                  <button className="text-zinc-400 hover:text-yellow-400 transition-colors">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <button
+                onClick={handleNextDay}
+                className="text-zinc-400 hover:text-white transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+
+            <button
+              onClick={handleToggleView}
+              className={`px-4 py-2 rounded-lg font-semibold transition-colors whitespace-nowrap ${
+                showAllAppointments
+                  ? 'bg-yellow-400 text-black'
+                  : 'bg-zinc-800 text-white hover:bg-zinc-700'
+              }`}
+              style={{ fontSize: `${responsive.fontSize.body}px` }}
+            >
+              {showAllAppointments ? 'Hide All Bookings' : 'View All Bookings'}
+            </button>
+          </div>
 
           {/* Conditional View */}
           {showAllAppointments ? (
@@ -222,11 +303,27 @@ export default function AppointmentsPage() {
               appointments={appointments}
               onAppointmentClick={handleAppointmentClick}
             />
+          ) : loadingStaff ? (
+            <div className="flex items-center justify-center" style={{ padding: `${spacing * 3}px` }}>
+              <div className="text-center">
+                <div className="w-12 h-12 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto" style={{ marginBottom: `${spacing}px` }}></div>
+                <p className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.body}px` }}>Loading staff...</p>
+              </div>
+            </div>
+          ) : staff.length === 0 ? (
+            <div className="text-center bg-zinc-900 rounded-lg border border-zinc-800" style={{ padding: `${spacing * 3}px` }}>
+              <svg className="w-16 h-16 text-zinc-600 mx-auto" style={{ marginBottom: `${spacing}px` }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              <p className="text-zinc-400 font-semibold" style={{ fontSize: `${responsive.fontSize.body}px`, marginBottom: `${spacing / 2}px` }}>No staff members</p>
+              <p className="text-zinc-500" style={{ fontSize: `${responsive.fontSize.small}px` }}>Add staff members to view their schedules</p>
+            </div>
           ) : (
-            <CalendarGrid
-              weekStart={currentWeekStart}
+            <StaffCalendarGrid
+              selectedDate={selectedDate}
+              staffMembers={staff}
               appointments={appointments}
-              onCellClick={handleCellClick}
+              onCellClick={handleStaffCellClick}
               onAppointmentClick={handleAppointmentClick}
             />
           )}
