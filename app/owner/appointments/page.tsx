@@ -342,6 +342,8 @@ export default function AppointmentsPage() {
         appointment={selectedAppointment}
         selectedDate={selectedSlot?.date}
         selectedTime={selectedSlot?.time}
+        selectedStaffId={selectedSlot?.staffId}
+        selectedStaffName={selectedSlot?.staffName}
         onSave={handleSaveAppointment}
       />
     </>

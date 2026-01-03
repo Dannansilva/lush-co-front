@@ -34,6 +34,8 @@ interface AppointmentSlidePanelProps {
   appointment: Appointment | null;
   selectedDate?: Date;
   selectedTime?: string;
+  selectedStaffId?: string;
+  selectedStaffName?: string;
   onSave: (appointment: Appointment) => void;
 }
 
@@ -43,6 +45,8 @@ export default function AppointmentSlidePanel({
   appointment,
   selectedDate,
   selectedTime,
+  selectedStaffId,
+  selectedStaffName,
   onSave,
 }: AppointmentSlidePanelProps) {
   const { width, height } = useScreenSize();
@@ -53,6 +57,7 @@ export default function AppointmentSlidePanel({
   const [services, setServices] = useState<Service[]>([]);
   const [loadingClients, setLoadingClients] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
+  const [selectedStaffIdState, setSelectedStaffIdState] = useState<string>('');
   const [selectedServiceId, setSelectedServiceId] = useState<string>('');
 
   // Fetch clients, staff, and services from API
@@ -99,7 +104,7 @@ export default function AppointmentSlidePanel({
       return {
         clientName: '',
         phone: '',
-        staffName: '',
+        staffName: selectedStaffName || '',
         service: '',
         date: formatDateToString(selectedDate),
         time: selectedTime,
@@ -128,10 +133,11 @@ export default function AppointmentSlidePanel({
     if (isOpen) {
       setFormData(getInitialFormData());
       setSelectedClientId('');
+      setSelectedStaffIdState(selectedStaffId || '');
       setSelectedServiceId('');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]);
+  }, [isOpen, selectedStaffId]);
 
   // Handle client selection
   const handleClientSelect = (clientId: string) => {
@@ -148,6 +154,23 @@ export default function AppointmentSlidePanel({
         ...formData,
         clientName: '',
         phone: '',
+      });
+    }
+  };
+
+  // Handle staff selection
+  const handleStaffSelect = (staffId: string) => {
+    setSelectedStaffIdState(staffId);
+    const selectedStaff = staff.find(s => s._id === staffId);
+    if (selectedStaff) {
+      setFormData({
+        ...formData,
+        staffName: selectedStaff.name,
+      });
+    } else {
+      setFormData({
+        ...formData,
+        staffName: '',
       });
     }
   };
@@ -298,8 +321,8 @@ export default function AppointmentSlidePanel({
               Staff <span className="text-red-400 ml-1">*</span>
             </label>
             <select
-              value={formData.staffName}
-              onChange={(e) => setFormData({ ...formData, staffName: e.target.value })}
+              value={selectedStaffIdState}
+              onChange={(e) => handleStaffSelect(e.target.value)}
               required
               className="w-full bg-zinc-800 border border-zinc-700 rounded-lg py-[0.875rem] px-[1rem] text-white text-[clamp(0.875rem,1.5vw,1rem)] focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 transition-all cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20stroke%3D%22%23a1a1aa%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%222%22%20d%3D%22m19%209-7%207-7-7%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.5rem] bg-[right_0.5rem_center] bg-no-repeat pr-10"
               style={{
@@ -308,7 +331,7 @@ export default function AppointmentSlidePanel({
             >
               <option value="" className="bg-zinc-900 text-zinc-400">Select staff</option>
               {staff.map((staffMember) => (
-                <option key={staffMember._id} value={staffMember.name} className="bg-zinc-900 text-white py-2">
+                <option key={staffMember._id} value={staffMember._id} className="bg-zinc-900 text-white py-2">
                   {staffMember.name}
                 </option>
               ))}
