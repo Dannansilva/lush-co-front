@@ -1,9 +1,42 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useScreenSize, getResponsiveValues, getResponsiveFontSize } from "@/app/hooks/useScreenSize";
 import { useAuth } from "@/app/context/AuthContext";
 import UserProfile from "@/app/components/UserProfile";
+import { apiGet } from "@/app/utils/api";
+
+interface BackendAppointment {
+  _id: string;
+  customer: {
+    _id: string;
+    name: string;
+    phoneNumber: string;
+  };
+  staff: {
+    _id: string;
+    name: string;
+  };
+  services: Array<{
+    _id: string;
+    name: string;
+    duration: number;
+    price: number;
+  }>;
+  appointmentDate: string;
+  status: string;
+  notes?: string;
+}
+
+interface DashboardAppointment {
+  id: string;
+  name: string;
+  service: string;
+  time: string;
+  phone: string;
+  status: string;
+  dateTime: Date;
+}
 
 export default function OwnerDashboard() {
   const { width, height } = useScreenSize();
@@ -16,39 +49,115 @@ export default function OwnerDashboard() {
 
   const isMobile = width < 768;
 
+  const [appointments, setAppointments] = useState<DashboardAppointment[]>([]);
+  const [loading, setLoading] = useState(true);
+
   // Get first name for greeting
   const getFirstName = () => {
     if (!user?.name) return "User";
     return user.name.split(" ")[0];
   };
 
-  // Sample data
-  const appointments = [
-    {
-      id: 1,
-      name: "Jennifer Adams",
-      service: "Balayage + Cut",
-      time: "9:00 AM",
-      phone: "(555) 123-4567",
-      status: "confirmed",
-    },
-    {
-      id: 2,
-      name: "Rachel Green",
-      service: "Bridal Styling",
-      time: "10:30 AM",
-      phone: "(555) 234-5678",
-      status: "pending",
-    },
-    {
-      id: 3,
-      name: "Monica Bell",
-      service: "Full Color",
-      time: "1:00 PM",
-      phone: "(555) 345-6789",
-      status: "confirmed",
-    },
-  ];
+  // Fetch appointments from API
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      setLoading(true);
+      const response = await apiGet<BackendAppointment[]>('/appointments');
+
+      if (response.success && response.data) {
+        const transformedAppointments: DashboardAppointment[] = response.data.map((apt) => {
+          const appointmentDate = new Date(apt.appointmentDate);
+
+          // Format time in 12-hour format
+          const hours = appointmentDate.getHours();
+          const minutes = appointmentDate.getMinutes();
+          const ampm = hours >= 12 ? 'PM' : 'AM';
+          const displayHours = hours % 12 || 12;
+          const timeStr = `${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+
+          // Get service names
+          const serviceNames = apt.services.map(s => s.name).join(', ');
+
+          return {
+            id: apt._id,
+            name: apt.customer?.name || 'Unknown Client',
+            service: serviceNames || 'Service',
+            time: timeStr,
+            phone: apt.customer?.phoneNumber || '',
+            status: apt.status?.toLowerCase() || 'pending',
+            dateTime: appointmentDate,
+          };
+        });
+
+        setAppointments(transformedAppointments);
+      }
+      setLoading(false);
+    };
+
+    fetchAppointments();
+  }, []);
+
+  // Calculate dashboard stats
+  const getTodayStats = () => {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+
+    // Filter today's appointments
+    const todayAppointments = appointments.filter(
+      apt => apt.dateTime >= todayStart && apt.dateTime <= todayEnd
+    );
+
+    // Today's appointments count
+    const todaysCount = todayAppointments.length;
+
+    // Next appointment time
+    const futureAppointments = appointments
+      .filter(apt => apt.dateTime > now)
+      .sort((a, b) => a.dateTime.getTime() - b.dateTime.getTime());
+
+    let nextAppointmentText = '-';
+    if (futureAppointments.length > 0) {
+      const nextApt = futureAppointments[0];
+      const diffMinutes = Math.floor((nextApt.dateTime.getTime() - now.getTime()) / (1000 * 60));
+
+      if (diffMinutes < 60) {
+        nextAppointmentText = `${diffMinutes} min`;
+      } else {
+        const hours = Math.floor(diffMinutes / 60);
+        nextAppointmentText = `${hours}h ${diffMinutes % 60}min`;
+      }
+    }
+
+    // Walk-ins (we don't have this data yet, so set to 0)
+    const walkInsCount = 0;
+
+    // Completed appointments count (assuming completed status exists)
+    const completedCount = appointments.filter(
+      apt => apt.status === 'completed'
+    ).length;
+
+    return {
+      todaysCount,
+      nextAppointmentText,
+      walkInsCount,
+      completedCount,
+    };
+  };
+
+  // Get upcoming appointments (today's future appointments)
+  const getUpcomingAppointments = () => {
+    const now = new Date();
+    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+
+    return appointments
+      .filter(apt => apt.dateTime >= now && apt.dateTime <= todayEnd)
+      .sort((a, b) => a.dateTime.getTime() - b.dateTime.getTime())
+      .slice(0, 5); // Show max 5 upcoming appointments
+  };
+
+  const stats = getTodayStats();
+  const upcomingAppointments = getUpcomingAppointments();
 
   // Quick actions data
   const quickActions = [
@@ -129,7 +238,9 @@ export default function OwnerDashboard() {
                 </svg>
               </div>
               <div>
-                <div className="font-bold" style={{ fontSize: `${statCardSize}px` }}>18</div>
+                <div className="font-bold" style={{ fontSize: `${statCardSize}px` }}>
+                  {loading ? '...' : stats.todaysCount}
+                </div>
                 <div className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.small}px` }}>Today&apos;s Appointments</div>
               </div>
             </div>
@@ -143,7 +254,9 @@ export default function OwnerDashboard() {
                 </svg>
               </div>
               <div>
-                <div className="font-bold" style={{ fontSize: `${statCardSize}px` }}>15 min</div>
+                <div className="font-bold" style={{ fontSize: `${statCardSize}px` }}>
+                  {loading ? '...' : stats.nextAppointmentText}
+                </div>
                 <div className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.small}px` }}>Next Appointment</div>
               </div>
             </div>
@@ -157,7 +270,9 @@ export default function OwnerDashboard() {
                 </svg>
               </div>
               <div>
-                <div className="font-bold" style={{ fontSize: `${statCardSize}px` }}>3</div>
+                <div className="font-bold" style={{ fontSize: `${statCardSize}px` }}>
+                  {loading ? '...' : stats.walkInsCount}
+                </div>
                 <div className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.small}px` }}>Walk-ins Today</div>
               </div>
             </div>
@@ -171,7 +286,9 @@ export default function OwnerDashboard() {
                 </svg>
               </div>
               <div>
-                <div className="font-bold" style={{ fontSize: `${statCardSize}px` }}>12</div>
+                <div className="font-bold" style={{ fontSize: `${statCardSize}px` }}>
+                  {loading ? '...' : stats.completedCount}
+                </div>
                 <div className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.small}px` }}>Completed</div>
               </div>
             </div>
@@ -200,7 +317,19 @@ export default function OwnerDashboard() {
             </h2>
 
             <div style={{ display: "flex", flexDirection: "column", gap: `${spacing}px` }}>
-              {appointments.map((apt) => (
+              {loading ? (
+                <div className="text-center" style={{ padding: `${spacing * 2}px` }}>
+                  <div className="w-8 h-8 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                  <p className="text-zinc-400 mt-2" style={{ fontSize: `${responsive.fontSize.small}px` }}>Loading appointments...</p>
+                </div>
+              ) : upcomingAppointments.length === 0 ? (
+                <div className="text-center bg-zinc-800/50 rounded-lg border border-zinc-700/50" style={{ padding: `${spacing * 3}px` }}>
+                  <svg className="w-12 h-12 text-zinc-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <p className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.body}px` }}>No upcoming appointments today</p>
+                </div>
+              ) : upcomingAppointments.map((apt) => (
                 <div
                   key={apt.id}
                   className="flex items-center justify-between bg-zinc-800/50 rounded-lg border border-zinc-700/50"

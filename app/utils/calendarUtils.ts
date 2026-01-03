@@ -15,6 +15,7 @@ export interface Appointment {
   price: number;
   status: "confirmed" | "pending" | "cancelled";
   phone: string;
+  notes?: string;
 }
 
 // Week calculation functions

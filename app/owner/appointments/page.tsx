@@ -18,6 +18,28 @@ interface StaffMember {
   phoneNumber: string;
 }
 
+interface BackendAppointment {
+  _id: string;
+  customer: {
+    _id: string;
+    name: string;
+    phoneNumber: string;
+  };
+  staff: {
+    _id: string;
+    name: string;
+  };
+  services: Array<{
+    _id: string;
+    name: string;
+    duration: number;
+    price: number;
+  }>;
+  appointmentDate: string;
+  status: string;
+  notes?: string;
+}
+
 export default function AppointmentsPage() {
   const { width, height } = useScreenSize();
   const responsive = getResponsiveValues(width, height);
@@ -34,6 +56,10 @@ export default function AppointmentsPage() {
   // Staff state
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loadingStaff, setLoadingStaff] = useState(true);
+
+  // Appointments state
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loadingAppointments, setLoadingAppointments] = useState(true);
 
   // Panel state
   const [isPanelOpen, setIsPanelOpen] = useState(false);
@@ -58,69 +84,62 @@ export default function AppointmentsPage() {
     fetchStaff();
   }, []);
 
-  // Mock appointments data
-  const [appointments, setAppointments] = useState<Appointment[]>([
-    {
-      id: 1,
-      clientName: "Jennifer Adams",
-      staffName: "Emma Wilson",
-      service: "Balayage + Cut",
-      date: "2025-12-16",
-      time: "9:00 AM",
-      duration: 120,
-      price: 285,
-      status: "confirmed",
-      phone: "(555) 123-4567"
-    },
-    {
-      id: 2,
-      clientName: "Rachel Green",
-      staffName: "Mia Rodriguez",
-      service: "Bridal Styling",
-      date: "2025-12-17",
-      time: "10:30 AM",
-      duration: 90,
-      price: 150,
-      status: "pending",
-      phone: "(555) 234-5678"
-    },
-    {
-      id: 3,
-      clientName: "Monica Bell",
-      staffName: "Emma Wilson",
-      service: "Full Color",
-      date: "2025-12-18",
-      time: "1:00 PM",
-      duration: 120,
-      price: 120,
-      status: "confirmed",
-      phone: "(555) 345-6789"
-    },
-    {
-      id: 4,
-      clientName: "Sarah Johnson",
-      staffName: "Olivia Kim",
-      service: "Precision Cut",
-      date: "2025-12-19",
-      time: "2:30 PM",
-      duration: 45,
-      price: 85,
-      status: "confirmed",
-      phone: "(555) 456-7890"
-    },
-    {
-      id: 5,
-      clientName: "Lisa Brown",
-      staffName: "Sophia Lee",
-      service: "Gel Manicure",
-      date: "2025-12-20",
-      time: "3:00 PM",
-      duration: 60,
-      price: 45,
-      status: "cancelled",
-      phone: "(555) 567-8901"
+  // Fetch appointments from API
+  const fetchAppointments = async () => {
+    setLoadingAppointments(true);
+    const response = await apiGet<BackendAppointment[]>('/appointments');
+
+    if (response.success && response.data) {
+      // Transform backend appointments to frontend format
+      const transformedAppointments: Appointment[] = response.data.map((apt) => {
+        const appointmentDate = new Date(apt.appointmentDate);
+
+        // Extract date in YYYY-MM-DD format
+        const dateStr = appointmentDate.toISOString().split('T')[0];
+
+        // Extract time in 12-hour format
+        const hours = appointmentDate.getHours();
+        const minutes = appointmentDate.getMinutes();
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        const displayHours = hours % 12 || 12;
+        const timeStr = `${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+
+        // Get service info (first service for now)
+        const serviceName = apt.services?.[0]?.name || 'Service';
+        const serviceDuration = apt.services?.[0]?.duration || 60;
+        const servicePrice = apt.services?.[0]?.price || 0;
+
+        // Map backend status to frontend status type
+        const statusLower = apt.status?.toLowerCase() || 'pending';
+        const status: 'confirmed' | 'pending' | 'cancelled' =
+          statusLower === 'confirmed' || statusLower === 'pending' || statusLower === 'cancelled'
+            ? statusLower
+            : 'pending';
+
+        return {
+          id: Date.now() + Math.random(), // Temporary numeric ID
+          clientName: apt.customer?.name || 'Unknown Client',
+          phone: apt.customer?.phoneNumber || '',
+          staffName: apt.staff?.name || 'Unknown Staff',
+          service: serviceName,
+          date: dateStr,
+          time: timeStr,
+          duration: serviceDuration,
+          price: servicePrice,
+          status,
+          notes: apt.notes,
+        };
+      });
+
+      setAppointments(transformedAppointments);
     }
-  ]);
+    setLoadingAppointments(false);
+  };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchAppointments();
+  }, []);
 
   // Handlers
   const handleStaffCellClick = (
@@ -148,16 +167,9 @@ export default function AppointmentsPage() {
     setIsPanelOpen(true);
   };
 
-  const handleSaveAppointment = (appointment: Appointment) => {
-    if (selectedAppointment) {
-      // Update existing appointment
-      setAppointments((prev) =>
-        prev.map((apt) => (apt.id === appointment.id ? appointment : apt))
-      );
-    } else {
-      // Add new appointment
-      setAppointments((prev) => [...prev, appointment]);
-    }
+  const handleSaveAppointment = () => {
+    // Refetch appointments from backend to get latest data
+    fetchAppointments();
     setIsPanelOpen(false);
   };
 
@@ -302,18 +314,18 @@ export default function AppointmentsPage() {
             </div>
 
             {/* Conditional View */}
-            {showAllAppointments ? (
+            {loadingStaff || loadingAppointments ? (
+              <div className="flex items-center justify-center" style={{ padding: `${spacing * 3}px` }}>
+                <div className="text-center">
+                  <div className="w-12 h-12 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto" style={{ marginBottom: `${spacing}px` }}></div>
+                  <p className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.body}px` }}>Loading...</p>
+                </div>
+              </div>
+            ) : showAllAppointments ? (
               <AllAppointmentsView
                 appointments={appointments}
                 onAppointmentClick={handleAppointmentClick}
               />
-            ) : loadingStaff ? (
-              <div className="flex items-center justify-center" style={{ padding: `${spacing * 3}px` }}>
-                <div className="text-center">
-                  <div className="w-12 h-12 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto" style={{ marginBottom: `${spacing}px` }}></div>
-                  <p className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.body}px` }}>Loading staff...</p>
-                </div>
-              </div>
             ) : staff.length === 0 ? (
               <div className="text-center bg-zinc-900 rounded-lg border border-zinc-800" style={{ padding: `${spacing * 3}px` }}>
                 <svg className="w-16 h-16 text-zinc-600 mx-auto" style={{ marginBottom: `${spacing}px` }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
