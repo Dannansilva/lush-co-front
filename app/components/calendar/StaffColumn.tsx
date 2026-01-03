@@ -46,7 +46,7 @@ export default function StaffColumn({
   return (
     <div
       className="bg-zinc-900 relative border-zinc-800"
-      style={{ height: `${cellHeight}px` }}
+      style={{ height: `${cellHeight}px`, overflow: 'visible' }}
     >
       {/* 15-minute time slots */}
       <div className="absolute inset-0 flex flex-col">

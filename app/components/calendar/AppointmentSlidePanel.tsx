@@ -3,7 +3,30 @@
 import React, { useState, useEffect } from 'react';
 import { useScreenSize, getResponsiveValues } from '@/app/hooks/useScreenSize';
 import { Appointment, formatDateToString } from '@/app/utils/calendarUtils';
+import { apiGet } from '@/app/utils/api';
 import Input from '../Input';
+
+interface Client {
+  _id: string;
+  name: string;
+  email: string;
+  phoneNumber: string;
+  address?: string;
+  notes?: string;
+}
+
+interface Staff {
+  _id: string;
+  name: string;
+  phoneNumber: string;
+}
+
+interface Service {
+  _id: string;
+  name: string;
+  duration: number;
+  price: number;
+}
 
 interface AppointmentSlidePanelProps {
   isOpen: boolean;
@@ -24,6 +47,39 @@ export default function AppointmentSlidePanel({
 }: AppointmentSlidePanelProps) {
   const { width, height } = useScreenSize();
   const responsive = getResponsiveValues(width, height);
+
+  const [clients, setClients] = useState<Client[]>([]);
+  const [staff, setStaff] = useState<Staff[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [loadingClients, setLoadingClients] = useState(false);
+  const [selectedClientId, setSelectedClientId] = useState<string>('');
+  const [selectedServiceId, setSelectedServiceId] = useState<string>('');
+
+  // Fetch clients, staff, and services from API
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoadingClients(true);
+
+      const [clientsRes, staffRes, servicesRes] = await Promise.all([
+        apiGet<Client[]>('/customers'),
+        apiGet<Staff[]>('/staff'),
+        apiGet<Service[]>('/services')
+      ]);
+
+      if (clientsRes.success && clientsRes.data) {
+        setClients(clientsRes.data);
+      }
+      if (staffRes.success && staffRes.data) {
+        setStaff(staffRes.data);
+      }
+      if (servicesRes.success && servicesRes.data) {
+        setServices(servicesRes.data);
+      }
+
+      setLoadingClients(false);
+    };
+    fetchData();
+  }, []);
 
   // Initialize form data based on props (not in effect)
   const getInitialFormData = () => {
@@ -71,9 +127,51 @@ export default function AppointmentSlidePanel({
   useEffect(() => {
     if (isOpen) {
       setFormData(getInitialFormData());
+      setSelectedClientId('');
+      setSelectedServiceId('');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
+
+  // Handle client selection
+  const handleClientSelect = (clientId: string) => {
+    setSelectedClientId(clientId);
+    const selectedClient = clients.find(c => c._id === clientId);
+    if (selectedClient) {
+      setFormData({
+        ...formData,
+        clientName: selectedClient.name,
+        phone: selectedClient.phoneNumber,
+      });
+    } else {
+      setFormData({
+        ...formData,
+        clientName: '',
+        phone: '',
+      });
+    }
+  };
+
+  // Handle service selection
+  const handleServiceSelect = (serviceId: string) => {
+    setSelectedServiceId(serviceId);
+    const selectedService = services.find(s => s._id === serviceId);
+    if (selectedService) {
+      setFormData({
+        ...formData,
+        service: selectedService.name,
+        duration: selectedService.duration.toString(),
+        price: selectedService.price.toString(),
+      });
+    } else {
+      setFormData({
+        ...formData,
+        service: '',
+        duration: '60',
+        price: '',
+      });
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -160,23 +258,40 @@ export default function AppointmentSlidePanel({
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="flex flex-col" style={{ gap: `${spacing}px` }}>
-          <Input
-            label="Client Name"
-            type="text"
-            placeholder="Enter client name"
-            value={formData.clientName}
-            onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
-            required
-          />
+          <div className="flex flex-col gap-2">
+            <label className="text-zinc-300 text-sm font-medium">
+              Client <span className="text-red-400 ml-1">*</span>
+            </label>
+            <select
+              value={selectedClientId}
+              onChange={(e) => handleClientSelect(e.target.value)}
+              required
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg py-[0.875rem] px-[1rem] text-white text-[clamp(0.875rem,1.5vw,1rem)] focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 transition-all cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20stroke%3D%22%23a1a1aa%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%222%22%20d%3D%22m19%209-7%207-7-7%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.5rem] bg-[right_0.5rem_center] bg-no-repeat pr-10"
+              style={{
+                colorScheme: 'dark'
+              }}
+            >
+              <option value="" className="bg-zinc-900 text-zinc-400">Select client</option>
+              {loadingClients ? (
+                <option disabled className="bg-zinc-900 text-zinc-500">Loading clients...</option>
+              ) : (
+                clients.map((client) => (
+                  <option key={client._id} value={client._id} className="bg-zinc-900 text-white py-2">
+                    {client.name}
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
 
-          <Input
-            label="Phone"
-            type="tel"
-            placeholder="(555) 123-4567"
-            value={formData.phone}
-            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-            required
-          />
+          <div className="flex flex-col gap-2">
+            <label className="text-zinc-300 text-sm font-medium">
+              Phone <span className="text-red-400 ml-1">*</span>
+            </label>
+            <div className="w-full bg-zinc-900/50 border border-zinc-700/50 rounded-lg py-[0.875rem] px-[1rem] text-zinc-400 text-[clamp(0.875rem,1.5vw,1rem)]">
+              {formData.phone || 'Select a client to see phone number'}
+            </div>
+          </div>
 
           <div className="flex flex-col gap-2">
             <label className="text-zinc-300 text-sm font-medium">
@@ -186,14 +301,17 @@ export default function AppointmentSlidePanel({
               value={formData.staffName}
               onChange={(e) => setFormData({ ...formData, staffName: e.target.value })}
               required
-              className="w-full bg-zinc-900/30 border border-zinc-700/50 rounded-lg py-[0.875rem] px-[1rem] text-white text-[clamp(0.875rem,1.5vw,1rem)] focus:outline-none focus:border-yellow-500 transition-colors"
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg py-[0.875rem] px-[1rem] text-white text-[clamp(0.875rem,1.5vw,1rem)] focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 transition-all cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20stroke%3D%22%23a1a1aa%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%222%22%20d%3D%22m19%209-7%207-7-7%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.5rem] bg-[right_0.5rem_center] bg-no-repeat pr-10"
+              style={{
+                colorScheme: 'dark'
+              }}
             >
-              <option value="">Select staff</option>
-              <option value="Emma Wilson">Emma Wilson</option>
-              <option value="Mia Rodriguez">Mia Rodriguez</option>
-              <option value="Olivia Kim">Olivia Kim</option>
-              <option value="Sophia Lee">Sophia Lee</option>
-              <option value="Isabella Chen">Isabella Chen</option>
+              <option value="" className="bg-zinc-900 text-zinc-400">Select staff</option>
+              {staff.map((staffMember) => (
+                <option key={staffMember._id} value={staffMember.name} className="bg-zinc-900 text-white py-2">
+                  {staffMember.name}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -202,19 +320,20 @@ export default function AppointmentSlidePanel({
               Service <span className="text-red-400 ml-1">*</span>
             </label>
             <select
-              value={formData.service}
-              onChange={(e) => setFormData({ ...formData, service: e.target.value })}
+              value={selectedServiceId}
+              onChange={(e) => handleServiceSelect(e.target.value)}
               required
-              className="w-full bg-zinc-900/30 border border-zinc-700/50 rounded-lg py-[0.875rem] px-[1rem] text-white text-[clamp(0.875rem,1.5vw,1rem)] focus:outline-none focus:border-yellow-500 transition-colors"
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg py-[0.875rem] px-[1rem] text-white text-[clamp(0.875rem,1.5vw,1rem)] focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 transition-all cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20stroke%3D%22%23a1a1aa%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%222%22%20d%3D%22m19%209-7%207-7-7%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.5rem] bg-[right_0.5rem_center] bg-no-repeat pr-10"
+              style={{
+                colorScheme: 'dark'
+              }}
             >
-              <option value="">Select service</option>
-              <option value="Balayage + Cut">Balayage + Cut</option>
-              <option value="Bridal Styling">Bridal Styling</option>
-              <option value="Full Color">Full Color</option>
-              <option value="Precision Cut">Precision Cut</option>
-              <option value="Gel Manicure">Gel Manicure</option>
-              <option value="Blowout">Blowout</option>
-              <option value="Hair Treatment">Hair Treatment</option>
+              <option value="" className="bg-zinc-900 text-zinc-400">Select service</option>
+              {services.map((service) => (
+                <option key={service._id} value={service._id} className="bg-zinc-900 text-white py-2">
+                  {service.name} - LKR {service.price} ({service.duration} min)
+                </option>
+              ))}
             </select>
           </div>
 
@@ -235,23 +354,23 @@ export default function AppointmentSlidePanel({
             </div>
           </div>
 
-          <Input
-            label="Duration (minutes)"
-            type="number"
-            placeholder="60"
-            value={formData.duration}
-            onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-            required
-          />
+          <div className="flex flex-col gap-2">
+            <label className="text-zinc-300 text-sm font-medium">
+              Duration (minutes) <span className="text-red-400 ml-1">*</span>
+            </label>
+            <div className="w-full bg-zinc-900/50 border border-zinc-700/50 rounded-lg py-[0.875rem] px-[1rem] text-zinc-400 text-[clamp(0.875rem,1.5vw,1rem)]">
+              {formData.duration || 'Select a service to see duration'}
+            </div>
+          </div>
 
-          <Input
-            label="Price"
-            type="number"
-            placeholder="85"
-            value={formData.price}
-            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-            required
-          />
+          <div className="flex flex-col gap-2">
+            <label className="text-zinc-300 text-sm font-medium">
+              Price (LKR) <span className="text-red-400 ml-1">*</span>
+            </label>
+            <div className="w-full bg-zinc-900/50 border border-zinc-700/50 rounded-lg py-[0.875rem] px-[1rem] text-zinc-400 text-[clamp(0.875rem,1.5vw,1rem)]">
+              {formData.price ? `LKR ${formData.price}` : 'Select a service to see price'}
+            </div>
+          </div>
 
           <div className="flex flex-col gap-2">
             <label className="text-zinc-300 text-sm font-medium">
@@ -266,11 +385,14 @@ export default function AppointmentSlidePanel({
                 })
               }
               required
-              className="w-full bg-zinc-900/30 border border-zinc-700/50 rounded-lg py-[0.875rem] px-[1rem] text-white text-[clamp(0.875rem,1.5vw,1rem)] focus:outline-none focus:border-yellow-500 transition-colors"
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg py-[0.875rem] px-[1rem] text-white text-[clamp(0.875rem,1.5vw,1rem)] focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 transition-all cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20stroke%3D%22%23a1a1aa%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%222%22%20d%3D%22m19%209-7%207-7-7%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.5rem] bg-[right_0.5rem_center] bg-no-repeat pr-10"
+              style={{
+                colorScheme: 'dark'
+              }}
             >
-              <option value="confirmed">Confirmed</option>
-              <option value="pending">Pending</option>
-              <option value="cancelled">Cancelled</option>
+              <option value="confirmed" className="bg-zinc-900 text-green-400 py-2">Confirmed</option>
+              <option value="pending" className="bg-zinc-900 text-orange-400 py-2">Pending</option>
+              <option value="cancelled" className="bg-zinc-900 text-red-400 py-2">Cancelled</option>
             </select>
           </div>
 

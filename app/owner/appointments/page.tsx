@@ -216,17 +216,18 @@ export default function AppointmentsPage() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto">
-        <div style={{ padding: `${spacing}px ${cardPadding}px` }}>
-          {/* Stats */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
-              gap: `${spacing}px`,
-              marginBottom: `${spacing * 2}px`
-            }}
-          >
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex flex-col overflow-hidden h-full">
+          {/* Stats - Fixed at top */}
+          <div style={{ padding: `${spacing}px ${cardPadding}px ${spacing}px ${cardPadding}px` }}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+                gap: `${spacing}px`,
+                marginBottom: `${spacing * 2}px`
+              }}
+            >
             <div className="bg-zinc-900 rounded-lg border border-zinc-800" style={{ padding: `${cardPadding}px` }}>
               <div className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.small}px` }}>Total</div>
               <div className="font-bold text-yellow-400" style={{ fontSize: `${responsive.fontSize.heading}px` }}>{stats.total}</div>
@@ -243,90 +244,94 @@ export default function AppointmentsPage() {
               <div className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.small}px` }}>Cancelled</div>
               <div className="font-bold text-red-400" style={{ fontSize: `${responsive.fontSize.heading}px` }}>{stats.cancelled}</div>
             </div>
+            </div>
           </div>
 
-          {/* Date Navigator with View All Bookings Button */}
-          <div className="flex items-center justify-between gap-3" style={{ marginBottom: `${spacing}px` }}>
-            <div className="flex items-center justify-between bg-zinc-900 rounded-lg border border-zinc-800 flex-1" style={{ padding: `${spacing}px ${cardPadding}px` }}>
-              <button
-                onClick={handlePreviousDay}
-                className="text-zinc-400 hover:text-white transition-colors"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              <div className="text-center flex items-center gap-3">
-                <div className="font-bold text-white" style={{ fontSize: `${responsive.fontSize.body}px` }}>
-                  {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+          {/* Scrollable section with date navigator and grid */}
+          <div className="flex-1 flex flex-col overflow-hidden" style={{ padding: `0 ${cardPadding}px ${spacing}px ${cardPadding}px` }}>
+            {/* Date Navigator with View All Bookings Button */}
+            <div className="flex items-center justify-between gap-3" style={{ marginBottom: `${spacing}px` }}>
+              <div className="flex items-center justify-between bg-zinc-900 rounded-lg border border-zinc-800 flex-1" style={{ padding: `${spacing}px ${cardPadding}px` }}>
+                <button
+                  onClick={handlePreviousDay}
+                  className="text-zinc-400 hover:text-white transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <div className="text-center flex items-center gap-3">
+                  <div className="font-bold text-white" style={{ fontSize: `${responsive.fontSize.body}px` }}>
+                    {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="date"
+                      value={selectedDate.toISOString().split('T')[0]}
+                      onChange={(e) => handleDateSelect(e.target.value)}
+                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                    />
+                    <button className="text-zinc-400 hover:text-yellow-400 transition-colors">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
-                <div className="relative">
-                  <input
-                    type="date"
-                    value={selectedDate.toISOString().split('T')[0]}
-                    onChange={(e) => handleDateSelect(e.target.value)}
-                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                  />
-                  <button className="text-zinc-400 hover:text-yellow-400 transition-colors">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </button>
-                </div>
+                <button
+                  onClick={handleNextDay}
+                  className="text-zinc-400 hover:text-white transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
               </div>
+
               <button
-                onClick={handleNextDay}
-                className="text-zinc-400 hover:text-white transition-colors"
+                onClick={handleToggleView}
+                className={`px-4 py-2 rounded-lg font-semibold transition-colors whitespace-nowrap ${
+                  showAllAppointments
+                    ? 'bg-yellow-400 text-black'
+                    : 'bg-zinc-800 text-white hover:bg-zinc-700'
+                }`}
+                style={{ fontSize: `${responsive.fontSize.body}px` }}
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
+                {showAllAppointments ? 'Hide All Bookings' : 'View All Bookings'}
               </button>
             </div>
 
-            <button
-              onClick={handleToggleView}
-              className={`px-4 py-2 rounded-lg font-semibold transition-colors whitespace-nowrap ${
-                showAllAppointments
-                  ? 'bg-yellow-400 text-black'
-                  : 'bg-zinc-800 text-white hover:bg-zinc-700'
-              }`}
-              style={{ fontSize: `${responsive.fontSize.body}px` }}
-            >
-              {showAllAppointments ? 'Hide All Bookings' : 'View All Bookings'}
-            </button>
+            {/* Conditional View */}
+            {showAllAppointments ? (
+              <AllAppointmentsView
+                appointments={appointments}
+                onAppointmentClick={handleAppointmentClick}
+              />
+            ) : loadingStaff ? (
+              <div className="flex items-center justify-center" style={{ padding: `${spacing * 3}px` }}>
+                <div className="text-center">
+                  <div className="w-12 h-12 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto" style={{ marginBottom: `${spacing}px` }}></div>
+                  <p className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.body}px` }}>Loading staff...</p>
+                </div>
+              </div>
+            ) : staff.length === 0 ? (
+              <div className="text-center bg-zinc-900 rounded-lg border border-zinc-800" style={{ padding: `${spacing * 3}px` }}>
+                <svg className="w-16 h-16 text-zinc-600 mx-auto" style={{ marginBottom: `${spacing}px` }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                <p className="text-zinc-400 font-semibold" style={{ fontSize: `${responsive.fontSize.body}px`, marginBottom: `${spacing / 2}px` }}>No staff members</p>
+                <p className="text-zinc-500" style={{ fontSize: `${responsive.fontSize.small}px` }}>Add staff members to view their schedules</p>
+              </div>
+            ) : (
+              <StaffCalendarGrid
+                selectedDate={selectedDate}
+                staffMembers={staff}
+                appointments={appointments}
+                onCellClick={handleStaffCellClick}
+                onAppointmentClick={handleAppointmentClick}
+              />
+            )}
           </div>
-
-          {/* Conditional View */}
-          {showAllAppointments ? (
-            <AllAppointmentsView
-              appointments={appointments}
-              onAppointmentClick={handleAppointmentClick}
-            />
-          ) : loadingStaff ? (
-            <div className="flex items-center justify-center" style={{ padding: `${spacing * 3}px` }}>
-              <div className="text-center">
-                <div className="w-12 h-12 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto" style={{ marginBottom: `${spacing}px` }}></div>
-                <p className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.body}px` }}>Loading staff...</p>
-              </div>
-            </div>
-          ) : staff.length === 0 ? (
-            <div className="text-center bg-zinc-900 rounded-lg border border-zinc-800" style={{ padding: `${spacing * 3}px` }}>
-              <svg className="w-16 h-16 text-zinc-600 mx-auto" style={{ marginBottom: `${spacing}px` }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-              <p className="text-zinc-400 font-semibold" style={{ fontSize: `${responsive.fontSize.body}px`, marginBottom: `${spacing / 2}px` }}>No staff members</p>
-              <p className="text-zinc-500" style={{ fontSize: `${responsive.fontSize.small}px` }}>Add staff members to view their schedules</p>
-            </div>
-          ) : (
-            <StaffCalendarGrid
-              selectedDate={selectedDate}
-              staffMembers={staff}
-              appointments={appointments}
-              onCellClick={handleStaffCellClick}
-              onAppointmentClick={handleAppointmentClick}
-            />
-          )}
         </div>
       </div>
 

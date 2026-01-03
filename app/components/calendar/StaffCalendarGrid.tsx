@@ -52,9 +52,9 @@ export default function StaffCalendarGrid({
   const staffColumns = Array(staffCount).fill('1fr').join(' ');
 
   return (
-    <div className="flex-1 overflow-auto">
+    <div className="flex-1 overflow-hidden">
       <div
-        className="grid bg-zinc-800 rounded-lg overflow-hidden"
+        className="grid bg-zinc-800 rounded-lg h-full overflow-auto"
         style={{
           gridTemplateColumns: `${timeColumnWidth}px ${staffColumns}`,
           gridTemplateRows: `60px repeat(${TOTAL_HOURS}, ${hourCellHeight}px)`,
