@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useScreenSize, getResponsiveValues } from '@/app/hooks/useScreenSize';
 import { Appointment, formatDateToString } from '@/app/utils/calendarUtils';
-import { apiGet, apiPost } from '@/app/utils/api';
+import { apiGet, apiPost, apiPut } from '@/app/utils/api';
 import Input from '../Input';
 
 interface Client {
@@ -123,7 +123,7 @@ export default function AppointmentSlidePanel({
         time: selectedTime,
         duration: '60',
         price: '',
-        status: 'confirmed' as 'confirmed' | 'pending' | 'cancelled',
+        status: 'confirmed' as 'confirmed' | 'pending' | 'cancelled' | 'in_progress' | 'completed',
       };
     }
     return {
@@ -135,7 +135,7 @@ export default function AppointmentSlidePanel({
       time: '',
       duration: '60',
       price: '',
-      status: 'confirmed' as 'confirmed' | 'pending' | 'cancelled',
+      status: 'confirmed' as 'confirmed' | 'pending' | 'cancelled' | 'in_progress' | 'completed',
     };
   };
 
@@ -308,18 +308,27 @@ export default function AppointmentSlidePanel({
         notes: notes || undefined,
       };
 
-      console.log('Creating appointment with data:', appointmentData);
+      // Check if we're editing an existing appointment or creating a new one
+      const isEditing = appointment && appointment._id;
 
-      // Create appointment via API
-      const response = await apiPost<AppointmentResponse>('/appointments', appointmentData);
-
-      console.log('Appointment creation response:', response);
+      let response;
+      if (isEditing) {
+        console.log('Updating appointment with data:', appointmentData);
+        // Update existing appointment via API
+        response = await apiPut<AppointmentResponse>(`/appointments/${appointment._id}`, appointmentData);
+        console.log('Appointment update response:', response);
+      } else {
+        console.log('Creating appointment with data:', appointmentData);
+        // Create new appointment via API
+        response = await apiPost<AppointmentResponse>('/appointments', appointmentData);
+        console.log('Appointment creation response:', response);
+      }
 
       if (response.success) {
         // Create local appointment object for UI update
-        // Use Date.now() as temporary ID for local state management
-        const newAppointment: Appointment = {
-          id: Date.now(),
+        const updatedAppointment: Appointment = {
+          id: appointment?.id || Date.now(),
+          _id: appointment?._id || (response.data as AppointmentResponse)?._id,
           clientName: formData.clientName,
           phone: formData.phone,
           staffName: formData.staffName,
@@ -329,18 +338,20 @@ export default function AppointmentSlidePanel({
           duration: parseInt(formData.duration),
           price: parseFloat(formData.price),
           status: formData.status,
+          notes: notes,
         };
 
-        onSave(newAppointment);
+        onSave(updatedAppointment);
       } else {
-        setError(response.message || 'Failed to create appointment');
+        setError(response.message || `Failed to ${isEditing ? 'update' : 'create'} appointment`);
         setSubmitting(false);
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'An error occurred while creating the appointment';
+      const isEditing = appointment && appointment._id;
+      const errorMessage = err instanceof Error ? err.message : `An error occurred while ${isEditing ? 'updating' : 'creating'} the appointment`;
       setError(errorMessage);
       setSubmitting(false);
-      console.error('Appointment creation error:', err);
+      console.error(`Appointment ${isEditing ? 'update' : 'creation'} error:`, err);
     }
   };
 
@@ -550,7 +561,7 @@ export default function AppointmentSlidePanel({
               onChange={(e) =>
                 setFormData({
                   ...formData,
-                  status: e.target.value as 'confirmed' | 'pending' | 'cancelled',
+                  status: e.target.value as 'confirmed' | 'pending' | 'cancelled' | 'in_progress' | 'completed',
                 })
               }
               required
@@ -559,8 +570,10 @@ export default function AppointmentSlidePanel({
                 colorScheme: 'dark'
               }}
             >
-              <option value="confirmed" className="bg-zinc-900 text-green-400 py-2">Confirmed</option>
               <option value="pending" className="bg-zinc-900 text-orange-400 py-2">Pending</option>
+              <option value="confirmed" className="bg-zinc-900 text-green-400 py-2">Confirmed</option>
+              <option value="in_progress" className="bg-zinc-900 text-blue-400 py-2">In Progress</option>
+              <option value="completed" className="bg-zinc-900 text-purple-400 py-2">Completed</option>
               <option value="cancelled" className="bg-zinc-900 text-red-400 py-2">Cancelled</option>
             </select>
           </div>

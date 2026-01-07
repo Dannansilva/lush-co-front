@@ -6,6 +6,7 @@ export const TOTAL_HOURS = CALENDAR_END_HOUR - CALENDAR_START_HOUR;
 // Appointment type (matches existing data model)
 export interface Appointment {
   id: number;
+  _id?: string; // MongoDB ID for editing
   clientName: string;
   staffName: string;
   service: string;
@@ -13,7 +14,7 @@ export interface Appointment {
   time: string;
   duration: number;
   price: number;
-  status: "confirmed" | "pending" | "cancelled";
+  status: "confirmed" | "pending" | "cancelled" | "in_progress" | "completed";
   phone: string;
   notes?: string;
 }

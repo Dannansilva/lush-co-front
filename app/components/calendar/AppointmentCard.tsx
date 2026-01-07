@@ -29,6 +29,16 @@ export default function AppointmentCard({
       border: 'border-orange-500',
       text: 'text-white',
     },
+    in_progress: {
+      bg: 'bg-blue-600',
+      border: 'border-blue-500',
+      text: 'text-white',
+    },
+    completed: {
+      bg: 'bg-green-600',
+      border: 'border-green-500',
+      text: 'text-white',
+    },
     cancelled: {
       bg: 'bg-red-600',
       border: 'border-red-500',
@@ -40,23 +50,46 @@ export default function AppointmentCard({
   const isMobile = responsive.device.isMobile;
   const minHeight = Math.max(position.height, 30);
 
+  // Status display labels
+  const statusLabels = {
+    confirmed: 'Confirmed',
+    pending: 'Pending',
+    in_progress: 'In Progress',
+    completed: 'Completed',
+    cancelled: 'Cancelled',
+  };
+
   return (
     <div
       className={`
         absolute left-1 right-1 rounded-lg border-l-4 overflow-hidden
-        cursor-pointer transition-all hover:shadow-lg z-20 flex items-center justify-center
+        cursor-pointer transition-all hover:shadow-lg z-20
         ${style.bg} ${style.border} ${style.text}
       `}
       style={{
         top: `${position.top}px`,
         height: `${minHeight}px`,
         padding: isMobile ? '6px 8px' : '8px 12px',
+        position: 'relative',
       }}
       onClick={onClick}
     >
-      <div className="flex flex-col gap-1 w-full">
+      {/* Status Badge - Top Right Corner */}
+      <div
+        className="absolute top-1 right-1"
+        style={{ zIndex: 10 }}
+      >
+        <span
+          className="px-1.5 py-0.5 rounded text-xs font-semibold bg-black/30 backdrop-blur-sm"
+          style={{ fontSize: `${Math.max(responsive.fontSize.caption * 0.85, 9)}px` }}
+        >
+          {statusLabels[appointment.status]}
+        </span>
+      </div>
+
+      <div className="flex flex-col gap-1 w-full pr-16">
         <div
-          className="font-bold truncate text-center"
+          className="font-bold truncate"
           style={{ fontSize: `${responsive.fontSize.body}px` }}
         >
           {appointment.clientName}
@@ -64,7 +97,7 @@ export default function AppointmentCard({
 
         {position.height > 40 && (
           <div
-            className="truncate opacity-90 text-center"
+            className="truncate opacity-90"
             style={{ fontSize: `${responsive.fontSize.small}px` }}
           >
             {appointment.service}
@@ -73,7 +106,7 @@ export default function AppointmentCard({
 
         {position.height > 60 && (
           <div
-            className="flex items-center justify-center gap-1 opacity-80"
+            className="flex items-center gap-1 opacity-80"
             style={{ fontSize: `${responsive.fontSize.caption}px` }}
           >
             <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -85,7 +118,7 @@ export default function AppointmentCard({
 
         {position.height > 80 && (
           <div
-            className="flex items-center justify-center gap-1 opacity-80"
+            className="flex items-center gap-1 opacity-80"
             style={{ fontSize: `${responsive.fontSize.caption}px` }}
           >
             <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">

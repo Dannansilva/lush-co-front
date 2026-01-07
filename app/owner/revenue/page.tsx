@@ -1,9 +1,21 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useScreenSize, getResponsiveValues } from "@/app/hooks/useScreenSize";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import UserProfile from "@/app/components/UserProfile";
+import {
+  getRevenueMetrics,
+  getRevenueByStaff,
+  getRevenueByCategory,
+  getRevenueTrends
+} from "@/app/services/revenueService";
+import {
+  RevenueMetrics,
+  RevenueByStaffItem,
+  RevenueByCategoryItem,
+  RevenueTrendItem
+} from "@/app/types/revenue";
 
 export default function RevenuePage() {
   const { width, height } = useScreenSize();
@@ -14,69 +26,126 @@ export default function RevenuePage() {
 
   const isMobile = width < 768;
 
+  // Get current year
+  const currentYear = new Date().getFullYear();
+
+  // State management
+  const [selectedYear, setSelectedYear] = useState<number>(currentYear);
+  const [revenueData, setRevenueData] = useState<RevenueMetrics | null>(null);
+  const [staffRevenue, setStaffRevenue] = useState<RevenueByStaffItem[]>([]);
+  const [categoryRevenue, setCategoryRevenue] = useState<RevenueByCategoryItem[]>([]);
+  const [revenueTrends, setRevenueTrends] = useState<RevenueTrendItem[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Generate year options (current year and 4 years back)
+  const yearOptions = Array.from({ length: 5 }, (_, i) => currentYear - i);
+
+  // Fetch all revenue data
+  useEffect(() => {
+    const fetchAllRevenueData = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        // Fetch all data in parallel
+        const [metricsResult, staffResult, categoryResult, trendsResult] = await Promise.all([
+          getRevenueMetrics({ year: selectedYear }),
+          getRevenueByStaff(selectedYear),
+          getRevenueByCategory(selectedYear),
+          getRevenueTrends(selectedYear)
+        ]);
+
+        // Handle metrics
+        if (metricsResult.success && metricsResult.data) {
+          setRevenueData(metricsResult.data);
+        } else {
+          setError(metricsResult.message || 'Failed to fetch revenue metrics');
+        }
+
+        // Handle staff revenue
+        if (staffResult.success && staffResult.data) {
+          setStaffRevenue(staffResult.data);
+        }
+
+        // Handle category revenue
+        if (categoryResult.success && categoryResult.data) {
+          setCategoryRevenue(categoryResult.data);
+        }
+
+        // Handle revenue trends
+        if (trendsResult.success && trendsResult.data) {
+          setRevenueTrends(trendsResult.data);
+        }
+      } catch (err) {
+        setError('An error occurred while fetching revenue data');
+        console.error('Revenue data fetch error:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchAllRevenueData();
+  }, [selectedYear]);
+
+  // Format currency
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('en-LK', {
+      style: 'currency',
+      currency: 'LKR',
+      minimumFractionDigits: 0,
+    }).format(value);
+  };
+
+  // Format number with commas
+  const formatNumber = (value: number) => {
+    return new Intl.NumberFormat('en-LK').format(value);
+  };
+
   const stats = [
     {
-      label: "Annual Revenue",
-      value: "$746,200",
-      change: "+23.5% vs last year",
+      label: "Total Revenue",
+      value: revenueData ? formatCurrency(revenueData.totalRevenue) : "LKR 0",
+      change: `Year ${selectedYear}`,
       icon: "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
       color: "yellow"
     },
     {
-      label: "Net Profit",
-      value: "$462,500",
-      change: "+18.2% vs last year",
-      icon: "M13 7h8m0 0v8m0-8l-8 8-4-4-6 6",
+      label: "Total Appointments",
+      value: revenueData ? formatNumber(revenueData.totalAppointments) : "0",
+      change: `Year ${selectedYear}`,
+      icon: "M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z",
       color: "yellow"
     },
     {
       label: "Avg Transaction",
-      value: "$127",
-      change: "+8.4% vs last year",
+      value: revenueData ? formatCurrency(revenueData.avgTransaction) : "LKR 0",
+      change: `Year ${selectedYear}`,
       icon: "M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z",
       color: "yellow"
     },
     {
-      label: "Total Clients",
-      value: "2,847",
-      change: "+342 new this year",
+      label: "Total Customers",
+      value: revenueData ? formatNumber(revenueData.totalCustomers) : "0",
+      change: `Year ${selectedYear}`,
       icon: "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z",
       color: "yellow"
     }
   ];
 
-  const revenueByCategory = [
-    { category: "Hair Styling", amount: 145000, percentage: 32, color: "#f59e0b" },
-    { category: "Hair Coloring", amount: 198000, percentage: 44, color: "#d97706" },
-    { category: "Treatments", amount: 87000, percentage: 19, color: "#92400e" },
-    { category: "Nails", amount: 92000, percentage: 20, color: "#78350f" },
-    { category: "Makeup", amount: 45000, percentage: 10, color: "#451a03" }
-  ];
+  // Color palette for categories
+  const categoryColors = ['#f59e0b', '#d97706', '#92400e', '#78350f', '#451a03', '#fbbf24', '#eab308'];
 
-  const revenueByStaff = [
-    { name: "Emma Wilson", amount: 165000 },
-    { name: "Mia Rodriguez", amount: 152000 },
-    { name: "Olivia Kim", amount: 128000 },
-    { name: "Sophia Lee", amount: 118000 },
-    { name: "Ava Martinez", amount: 95000 }
-  ];
+  // Process category revenue with colors
+  const categoryRevenueWithColors = categoryRevenue.map((cat, index) => ({
+    ...cat,
+    color: categoryColors[index % categoryColors.length]
+  }));
 
-  const maxRevenue = Math.max(...revenueByStaff.map(s => s.amount));
-
-  const revenueVsExpensesData = [
-    { month: 'Jan', revenue: 58000, expenses: 32000 },
-    { month: 'Feb', revenue: 61000, expenses: 34000 },
-    { month: 'Mar', revenue: 63000, expenses: 35000 },
-    { month: 'Apr', revenue: 59000, expenses: 33000 },
-    { month: 'May', revenue: 65000, expenses: 36000 },
-    { month: 'Jun', revenue: 68000, expenses: 37000 },
-    { month: 'Jul', revenue: 70000, expenses: 38000 },
-    { month: 'Aug', revenue: 67000, expenses: 37000 },
-    { month: 'Sep', revenue: 71000, expenses: 39000 },
-    { month: 'Oct', revenue: 73000, expenses: 40000 },
-    { month: 'Nov', revenue: 69000, expenses: 38000 },
-    { month: 'Dec', revenue: 75000, expenses: 41000 }
-  ];
+  // Calculate max revenue for staff chart
+  const maxStaffRevenue = staffRevenue.length > 0
+    ? Math.max(...staffRevenue.map(s => s.totalRevenue))
+    : 1;
 
   return (
     <>
@@ -97,15 +166,32 @@ export default function RevenuePage() {
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
         <div style={{ padding: `${spacing}px ${cardPadding}px` }}>
+          {/* Error Message */}
+          {error && (
+            <div
+              className="bg-red-900/20 border border-red-800 text-red-400 rounded-lg flex items-center gap-3"
+              style={{ padding: `${spacing}px ${cardPadding}px`, marginBottom: `${spacing}px` }}
+            >
+              <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span style={{ fontSize: `${responsive.fontSize.body}px` }}>{error}</span>
+            </div>
+          )}
+
           {/* Year Selector and Export */}
           <div className="flex items-center justify-between" style={{ marginBottom: `${spacing}px` }}>
             <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
               className="bg-zinc-900 border border-zinc-800 rounded-lg text-white"
               style={{ padding: `${spacing / 2}px ${cardPadding}px`, fontSize: `${responsive.fontSize.body}px` }}
             >
-              <option>2025</option>
-              <option>2024</option>
-              <option>2023</option>
+              {yearOptions.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
             </select>
 
             <button
@@ -125,9 +211,25 @@ export default function RevenuePage() {
               display: 'grid',
               gridTemplateColumns: isMobile ? '1fr' : width < 1280 ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
               gap: `${spacing}px`,
-              marginBottom: `${spacing * 2}px`
+              marginBottom: `${spacing * 2}px`,
+              position: 'relative'
             }}
           >
+            {/* Loading Overlay */}
+            {isLoading && (
+              <div
+                className="absolute inset-0 bg-black/50 rounded-xl flex items-center justify-center z-10"
+                style={{ backdropFilter: 'blur(4px)' }}
+              >
+                <div className="flex flex-col items-center gap-3">
+                  <div className="w-8 h-8 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
+                  <span className="text-white" style={{ fontSize: `${responsive.fontSize.body}px` }}>
+                    Loading revenue data...
+                  </span>
+                </div>
+              </div>
+            )}
+
             {stats.map((stat, index) => (
               <div
                 key={index}
@@ -140,7 +242,7 @@ export default function RevenuePage() {
                       {stat.label}
                     </div>
                     <div className="font-bold" style={{ fontSize: `${responsive.fontSize.heading}px` }}>{stat.value}</div>
-                    <div className="text-green-400" style={{ fontSize: `${responsive.fontSize.small}px` }}>
+                    <div className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.small}px` }}>
                       {stat.change}
                     </div>
                   </div>
@@ -162,9 +264,10 @@ export default function RevenuePage() {
             <h3 className="font-bold" style={{ fontSize: `${responsive.fontSize.subheading}px`, marginBottom: `${spacing}px` }}>
               Revenue vs Expenses
             </h3>
-            <div style={{ height: '300px', width: '100%' }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={revenueVsExpensesData}>
+            {revenueTrends.length > 0 ? (
+              <div style={{ height: '300px', width: '100%' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={revenueTrends}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
                   <XAxis
                     dataKey="month"
@@ -210,6 +313,11 @@ export default function RevenuePage() {
                 </LineChart>
               </ResponsiveContainer>
             </div>
+            ) : (
+              <div className="flex items-center justify-center text-zinc-400" style={{ height: '300px', fontSize: `${responsive.fontSize.body}px` }}>
+                No revenue trend data available
+              </div>
+            )}
           </div>
 
           {/* Bottom Charts */}
@@ -239,17 +347,23 @@ export default function RevenuePage() {
 
                 {/* Legend */}
                 <div className="flex-1 space-y-2">
-                  {revenueByCategory.map((item, index) => (
-                    <div key={index} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
-                        <span style={{ fontSize: `${responsive.fontSize.small}px` }}>{item.category}</span>
+                  {categoryRevenueWithColors.length > 0 ? (
+                    categoryRevenueWithColors.map((item) => (
+                      <div key={item.category} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
+                          <span style={{ fontSize: `${responsive.fontSize.small}px` }}>{item.category}</span>
+                        </div>
+                        <span className="font-semibold" style={{ fontSize: `${responsive.fontSize.small}px` }}>
+                          {formatCurrency(item.totalRevenue)}
+                        </span>
                       </div>
-                      <span className="font-semibold" style={{ fontSize: `${responsive.fontSize.small}px` }}>
-                        ${(item.amount / 1000).toFixed(0)}k
-                      </span>
+                    ))
+                  ) : (
+                    <div className="text-zinc-400 text-center py-4" style={{ fontSize: `${responsive.fontSize.body}px` }}>
+                      No category data available
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
             </div>
@@ -264,20 +378,26 @@ export default function RevenuePage() {
               </h3>
 
               <div className="space-y-3">
-                {revenueByStaff.map((staff, index) => (
-                  <div key={index}>
-                    <div className="flex items-center justify-between text-zinc-400" style={{ fontSize: `${responsive.fontSize.small}px`, marginBottom: `${spacing / 3}px` }}>
-                      <span>{staff.name}</span>
-                      <span className="font-semibold">${(staff.amount / 1000).toFixed(0)}k</span>
+                {staffRevenue.length > 0 ? (
+                  staffRevenue.map((staff) => (
+                    <div key={staff.staffName}>
+                      <div className="flex items-center justify-between text-zinc-400" style={{ fontSize: `${responsive.fontSize.small}px`, marginBottom: `${spacing / 3}px` }}>
+                        <span>{staff.staffName}</span>
+                        <span className="font-semibold">{formatCurrency(staff.totalRevenue)}</span>
+                      </div>
+                      <div className="w-full bg-zinc-800 rounded-full h-2">
+                        <div
+                          className="bg-yellow-400 h-2 rounded-full transition-all"
+                          style={{ width: `${(staff.totalRevenue / maxStaffRevenue) * 100}%` }}
+                        ></div>
+                      </div>
                     </div>
-                    <div className="w-full bg-zinc-800 rounded-full h-2">
-                      <div
-                        className="bg-yellow-400 h-2 rounded-full transition-all"
-                        style={{ width: `${(staff.amount / maxRevenue) * 100}%` }}
-                      ></div>
-                    </div>
+                  ))
+                ) : (
+                  <div className="text-zinc-400 text-center py-4" style={{ fontSize: `${responsive.fontSize.body}px` }}>
+                    No staff revenue data available
                   </div>
-                ))}
+                )}
               </div>
             </div>
           </div>

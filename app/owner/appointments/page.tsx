@@ -111,13 +111,15 @@ export default function AppointmentsPage() {
 
         // Map backend status to frontend status type
         const statusLower = apt.status?.toLowerCase() || 'pending';
-        const status: 'confirmed' | 'pending' | 'cancelled' =
-          statusLower === 'confirmed' || statusLower === 'pending' || statusLower === 'cancelled'
-            ? statusLower
+        const validStatuses = ['confirmed', 'pending', 'cancelled', 'in_progress', 'completed'];
+        const status: 'confirmed' | 'pending' | 'cancelled' | 'in_progress' | 'completed' =
+          validStatuses.includes(statusLower)
+            ? (statusLower as 'confirmed' | 'pending' | 'cancelled' | 'in_progress' | 'completed')
             : 'pending';
 
         return {
           id: Date.now() + Math.random(), // Temporary numeric ID
+          _id: apt._id, // MongoDB ID for editing
           clientName: apt.customer?.name || 'Unknown Client',
           phone: apt.customer?.phoneNumber || '',
           staffName: apt.staff?.name || 'Unknown Staff',
