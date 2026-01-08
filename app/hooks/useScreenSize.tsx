@@ -116,41 +116,41 @@ export function getResponsiveBorderRadius(screenWidth: number, minRadius: number
 // Comprehensive function to get all common responsive values at once
 export function getResponsiveValues(screenWidth: number, screenHeight: number) {
   return {
-    // Padding
+    // Padding - rounded to avoid hydration mismatch
     padding: {
-      horizontal: screenWidth * 0.05,
-      vertical: screenHeight * 0.05,
+      horizontal: Math.round(screenWidth * 0.05),
+      vertical: Math.round(screenHeight * 0.05),
     },
 
-    // Font sizes
+    // Font sizes - rounded to avoid hydration mismatch
     fontSize: {
-      heading: getResponsiveFontSize(screenWidth, 24, 32),
-      subheading: getResponsiveFontSize(screenWidth, 18, 24),
-      body: getResponsiveFontSize(screenWidth, 14, 16),
-      label: getResponsiveFontSize(screenWidth, 14, 14),
-      small: getResponsiveFontSize(screenWidth, 12, 14),
-      caption: getResponsiveFontSize(screenWidth, 10, 12),
+      heading: Math.round(getResponsiveFontSize(screenWidth, 24, 32)),
+      subheading: Math.round(getResponsiveFontSize(screenWidth, 18, 24)),
+      body: Math.round(getResponsiveFontSize(screenWidth, 14, 16)),
+      label: Math.round(getResponsiveFontSize(screenWidth, 14, 14)),
+      small: Math.round(getResponsiveFontSize(screenWidth, 12, 14)),
+      caption: Math.round(getResponsiveFontSize(screenWidth, 10, 12)),
     },
 
-    // Card/Container
+    // Card/Container - rounded to avoid hydration mismatch
     card: {
-      padding: Math.max(24, Math.min(screenWidth * 0.04, 40)),
-      borderRadius: getResponsiveBorderRadius(screenWidth, 12, 24),
-      maxWidth: Math.min(screenWidth * 0.9, 600),
+      padding: Math.round(Math.max(24, Math.min(screenWidth * 0.04, 40))),
+      borderRadius: Math.round(getResponsiveBorderRadius(screenWidth, 12, 24)),
+      maxWidth: Math.round(Math.min(screenWidth * 0.9, 600)),
     },
 
-    // Spacing
+    // Spacing - rounded to avoid hydration mismatch
     spacing: {
-      vertical: Math.max(20, Math.min(screenHeight * 0.025, 24)),
-      horizontal: Math.max(16, Math.min(screenWidth * 0.025, 32)),
-      gap: Math.max(12, Math.min(screenWidth * 0.02, 24)),
+      vertical: Math.round(Math.max(20, Math.min(screenHeight * 0.025, 24))),
+      horizontal: Math.round(Math.max(16, Math.min(screenWidth * 0.025, 32))),
+      gap: Math.round(Math.max(12, Math.min(screenWidth * 0.02, 24))),
     },
 
-    // Margins
+    // Margins - rounded to avoid hydration mismatch
     margin: {
-      bottom: Math.max(24, Math.min(screenHeight * 0.03, 32)),
-      top: Math.max(24, Math.min(screenHeight * 0.03, 32)),
-      sides: Math.max(16, Math.min(screenWidth * 0.04, 48)),
+      bottom: Math.round(Math.max(24, Math.min(screenHeight * 0.03, 32))),
+      top: Math.round(Math.max(24, Math.min(screenHeight * 0.03, 32))),
+      sides: Math.round(Math.max(16, Math.min(screenWidth * 0.04, 48))),
     },
 
     // Device info
