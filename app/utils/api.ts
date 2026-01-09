@@ -81,9 +81,10 @@ export async function apiRequest<T>(
     }
 
     // Handle backend responses that return data at root level vs nested under 'data'
-    // Case 1: Backend returns { success, data: { actual data } } - standard format
-    // Case 2: Backend returns { success, ...actualData } - data at root level
-    // Case 3: Backend returns { success, data: [...] } - array directly in data
+    // Case 1: Backend returns { success, data: [...] } - standard format with data array
+    // Case 2: Backend returns { success, count, data: [...] } - standard format with count
+    // Case 3: Backend returns { success, ...actualData } - data at root level
+    // Case 4: Backend returns { success, year, data: [...] } - trends format
 
     if (responseData.success) {
       // If data property doesn't exist, wrap the response
@@ -96,10 +97,16 @@ export async function apiRequest<T>(
         };
       }
 
+      // If data exists with count property, return standard format
+      // Example: { success, count, data: [...] } -> just return as-is
+      if (responseData.data && responseData.count !== undefined) {
+        return responseData;
+      }
+
       // If data exists but other root properties exist too (like year, period), wrap everything
       if (responseData.data && Object.keys(responseData).length > 2) {
         // Check if this is trends format: { success, year, data: [...] }
-        const otherProps = Object.keys(responseData).filter(k => k !== 'success' && k !== 'data' && k !== 'message');
+        const otherProps = Object.keys(responseData).filter(k => k !== 'success' && k !== 'data' && k !== 'message' && k !== 'count');
         if (otherProps.length > 0) {
           const { success, message, ...allData } = responseData;
           return {

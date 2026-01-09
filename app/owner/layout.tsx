@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -14,30 +14,16 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
   const { logout } = useAuth();
   const { width, height } = useScreenSize();
 
-  const [mounted, setMounted] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
-  // Prevent hydration mismatch by only rendering after mount
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Required for fixing hydration mismatch
-    setMounted(true);
-  }, []);
+  // Get responsive values based on screen size
+  const responsive = getResponsiveValues(width, height);
 
-  // Use default values until mounted
-  const responsive = mounted ? getResponsiveValues(width, height) : {
-    fontSize: { heading: 24, subheading: 18, body: 14, label: 14, small: 12, caption: 10 },
-    padding: { horizontal: 20, vertical: 20 },
-    spacing: { vertical: 20, horizontal: 16, gap: 12 },
-    margin: { bottom: 24, top: 24, sides: 16 },
-    card: { padding: 24, borderRadius: 12, maxWidth: 600 },
-    device: { type: 'desktop' as const, isMobile: false, isTablet: false, isDesktop: true, columns: 3 }
-  };
-
-  // Round all values to avoid hydration mismatch from floating point precision
-  const cardPadding = mounted ? Math.round(Math.max(12, Math.min(width * 0.015, 20))) : 16;
-  const spacing = mounted ? Math.round(Math.max(12, Math.min(width * 0.02, 16))) : 16;
-  const isDesktop = mounted ? width > 1024 : true;
+  // Calculate component-specific values
+  const cardPadding = Math.round(Math.max(12, Math.min(width * 0.015, 20)));
+  const spacing = Math.round(Math.max(12, Math.min(width * 0.02, 16)));
+  const isDesktop = width > 1024;
 
   const isMenuOpen = isDesktop ? !isSidebarCollapsed : isMobileMenuOpen;
   const sidebarWidth = isSidebarCollapsed ? 70 : 240;
