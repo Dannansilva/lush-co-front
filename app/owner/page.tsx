@@ -1,10 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useScreenSize, getResponsiveValues, getResponsiveFontSize } from "@/app/hooks/useScreenSize";
 import { useAuth } from "@/app/context/AuthContext";
 import UserProfile from "@/app/components/UserProfile";
+import AppointmentSlidePanel from "@/app/components/calendar/AppointmentSlidePanel";
 import { apiGet } from "@/app/utils/api";
+import { Appointment } from "@/app/utils/calendarUtils";
 
 interface BackendAppointment {
   _id: string;
@@ -39,6 +42,7 @@ interface DashboardAppointment {
 }
 
 export default function OwnerDashboard() {
+  const router = useRouter();
   const { width, height } = useScreenSize();
   const responsive = getResponsiveValues(width, height);
   const { user } = useAuth();
@@ -51,6 +55,7 @@ export default function OwnerDashboard() {
 
   const [appointments, setAppointments] = useState<DashboardAppointment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isAppointmentPanelOpen, setIsAppointmentPanelOpen] = useState(false);
 
   // Get first name for greeting
   const getFirstName = () => {
@@ -159,6 +164,38 @@ export default function OwnerDashboard() {
   const stats = getTodayStats();
   const upcomingAppointments = getUpcomingAppointments();
 
+  // Handle appointment save
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleAppointmentSave = (appointment: Appointment) => {
+    setIsAppointmentPanelOpen(false);
+    // Refresh appointments data
+    const fetchAppointments = async () => {
+      const response = await apiGet<BackendAppointment[]>('/appointments');
+      if (response.success && response.data) {
+        const transformedAppointments: DashboardAppointment[] = response.data.map((apt) => {
+          const appointmentDate = new Date(apt.appointmentDate);
+          const hours = appointmentDate.getHours();
+          const minutes = appointmentDate.getMinutes();
+          const ampm = hours >= 12 ? 'PM' : 'AM';
+          const displayHours = hours % 12 || 12;
+          const timeStr = `${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+          const serviceNames = apt.services.map(s => s.name).join(', ');
+          return {
+            id: apt._id,
+            name: apt.customer?.name || 'Unknown Client',
+            service: serviceNames || 'Service',
+            time: timeStr,
+            phone: apt.customer?.phoneNumber || '',
+            status: apt.status?.toLowerCase() || 'pending',
+            dateTime: appointmentDate,
+          };
+        });
+        setAppointments(transformedAppointments);
+      }
+    };
+    fetchAppointments();
+  };
+
   // Quick actions data
   const quickActions = [
     {
@@ -172,6 +209,7 @@ export default function OwnerDashboard() {
       ),
       bgColor: "bg-blue-500/10",
       iconColor: "text-blue-500",
+      onClick: () => setIsAppointmentPanelOpen(true),
     },
     {
       id: 2,
@@ -184,6 +222,7 @@ export default function OwnerDashboard() {
       ),
       bgColor: "bg-purple-500/10",
       iconColor: "text-purple-500",
+      onClick: () => router.push('/owner/clients'),
     },
     {
       id: 3,
@@ -196,6 +235,7 @@ export default function OwnerDashboard() {
       ),
       bgColor: "bg-orange-500/10",
       iconColor: "text-orange-500",
+      onClick: () => router.push('/owner/services'),
     },
   ];
 
@@ -220,9 +260,10 @@ export default function OwnerDashboard() {
       </div>
 
       {/* Scrollable Content Area */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto flex flex-col">
         {/* Stats Cards */}
         <div
+          className="flex-shrink-0"
           style={{
             padding: `${spacing}px ${cardPadding}px`,
             display: "grid",
@@ -297,15 +338,17 @@ export default function OwnerDashboard() {
 
         {/* Content Grid */}
         <div
+          className="flex-1"
           style={{
             padding: `0 ${cardPadding}px ${spacing}px`,
             display: "grid",
             gridTemplateColumns: isMobile ? "1fr" : "1.5fr 1fr",
             gap: `${spacing}px`,
+            minHeight: 0,
           }}
         >
           {/* Upcoming Appointments */}
-          <div className="bg-zinc-900 rounded-xl border border-zinc-800" style={{ padding: `${cardPadding}px` }}>
+          <div className="bg-zinc-900 rounded-xl border border-zinc-800 flex flex-col" style={{ padding: `${cardPadding}px` }}>
             <h2
               className="font-bold"
               style={{
@@ -316,7 +359,7 @@ export default function OwnerDashboard() {
               Upcoming Appointments
             </h2>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: `${spacing}px` }}>
+            <div className="flex-1 overflow-y-auto" style={{ display: "flex", flexDirection: "column", gap: `${spacing}px` }}>
               {loading ? (
                 <div className="text-center" style={{ padding: `${spacing * 2}px` }}>
                   <div className="w-8 h-8 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto"></div>
@@ -377,7 +420,7 @@ export default function OwnerDashboard() {
           </div>
 
           {/* Quick Actions */}
-          <div className="bg-zinc-900 rounded-xl border border-zinc-800" style={{ padding: `${cardPadding}px` }}>
+          <div className="bg-zinc-900 rounded-xl border border-zinc-800 flex flex-col" style={{ padding: `${cardPadding}px` }}>
             <h2
               className="font-bold"
               style={{
@@ -398,23 +441,23 @@ export default function OwnerDashboard() {
             </p>
 
             <div
+              className="flex-1 flex flex-col"
               style={{
-                display: "grid",
-                gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)",
                 gap: `${spacing}px`,
               }}
             >
               {quickActions.map((action) => (
                 <button
                   key={action.id}
-                  className="bg-zinc-800/50 hover:bg-zinc-800 border border-zinc-700/50 rounded-lg transition-colors text-left"
-                  style={{ padding: `${cardPadding}px` }}
+                  onClick={action.onClick}
+                  className="bg-zinc-800/50 hover:bg-zinc-800 border border-zinc-700/50 rounded-lg transition-all hover:scale-[1.02] text-left"
+                  style={{ padding: `${cardPadding * 1.2}px` }}
                 >
-                  <div className="flex items-start gap-3">
-                    <div className={`${action.bgColor} ${action.iconColor} rounded-lg p-2 flex-shrink-0`}>
+                  <div className="flex items-center gap-4">
+                    <div className={`${action.bgColor} ${action.iconColor} rounded-lg flex-shrink-0`} style={{ padding: `${spacing}px` }}>
                       {action.icon}
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <div className="font-semibold" style={{ fontSize: `${responsive.fontSize.body}px` }}>
                         {action.title}
                       </div>
@@ -422,6 +465,9 @@ export default function OwnerDashboard() {
                         {action.description}
                       </div>
                     </div>
+                    <svg className="w-5 h-5 text-zinc-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
                   </div>
                 </button>
               ))}
@@ -429,6 +475,14 @@ export default function OwnerDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Appointment Slide Panel */}
+      <AppointmentSlidePanel
+        isOpen={isAppointmentPanelOpen}
+        onClose={() => setIsAppointmentPanelOpen(false)}
+        appointment={null}
+        onSave={handleAppointmentSave}
+      />
     </>
   );
 }
