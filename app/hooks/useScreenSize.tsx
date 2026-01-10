@@ -8,9 +8,11 @@ interface ScreenSize {
 }
 
 export function useScreenSize() {
+  // Use consistent default values for SSR and initial client render to prevent hydration mismatch
+  // Default to desktop size (1920x1080) as it's the most common and provides better initial UX
   const [screenSize, setScreenSize] = useState<ScreenSize>({
-    width: typeof window !== 'undefined' ? window.innerWidth : 0,
-    height: typeof window !== 'undefined' ? window.innerHeight : 0,
+    width: 1920,
+    height: 1080,
   });
 
   useEffect(() => {
@@ -21,11 +23,11 @@ export function useScreenSize() {
       });
     }
 
+    // Call handler right away so state gets updated with actual window size after mount
+    handleResize();
+
     // Add event listener
     window.addEventListener('resize', handleResize);
-
-    // Call handler right away so state gets updated with initial window size
-    handleResize();
 
     // Remove event listener on cleanup
     return () => window.removeEventListener('resize', handleResize);
