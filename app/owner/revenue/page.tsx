@@ -30,6 +30,8 @@ export default function RevenuePage() {
   // State management
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
   const [selectedMonth, setSelectedMonth] = useState<number>(currentMonth);
+  const [filterMode, setFilterMode] = useState<'current' | 'last' | 'custom'>('current');
+  const [isFilterOpen, setIsFilterOpen] = useState<boolean>(false);
   const [monthlyData, setMonthlyData] = useState<MonthlyRevenueData | null>(null);
   const [revenueTrends, setRevenueTrends] = useState<RevenueTrendItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -54,6 +56,19 @@ export default function RevenuePage() {
     { value: 12, label: 'December' }
   ];
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (isFilterOpen && !target.closest('.filter-dropdown-container')) {
+        setIsFilterOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isFilterOpen]);
+
   // Fetch all revenue data
   useEffect(() => {
     const fetchAllRevenueData = async () => {
@@ -61,9 +76,14 @@ export default function RevenuePage() {
       setError(null);
 
       try {
-        // Fetch monthly revenue for selected month/year and trends in parallel
+        // Determine parameters based on filter mode
+        const monthlyParams = filterMode === 'custom'
+          ? { month: selectedMonth, year: selectedYear }
+          : { filter: filterMode };
+
+        // Fetch monthly revenue and trends in parallel
         const [monthlyResult, trendsResult] = await Promise.all([
-          getMonthlyRevenue({ month: selectedMonth, year: selectedYear }),
+          getMonthlyRevenue(monthlyParams),
           getRevenueTrends(selectedYear)
         ]);
 
@@ -100,7 +120,7 @@ export default function RevenuePage() {
     };
 
     fetchAllRevenueData();
-  }, [selectedYear, selectedMonth]);
+  }, [selectedYear, selectedMonth, filterMode]);
 
   // Format currency
   const formatCurrency = (value: number) => {
@@ -117,51 +137,29 @@ export default function RevenuePage() {
   };
 
   // Extract data from monthly data
-  const summary = monthlyData?.summary;
-  const avgTransaction = summary && summary.totalAppointments > 0
-    ? summary.totalRevenue / summary.totalAppointments
-    : 0;
-
   const stats = [
     {
       label: "Total Revenue",
-      value: summary ? formatCurrency(summary.totalRevenue) : "LKR 0",
-      change: monthlyData ? `${monthlyData.period.month} ${monthlyData.period.year}` : `Year ${selectedYear}`,
+      value: monthlyData ? formatCurrency(monthlyData.totalRevenue) : "LKR 0",
+      change: monthlyData ? `${monthlyData.monthName} ${monthlyData.year}` : `Year ${selectedYear}`,
       icon: "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
       color: "yellow"
     },
     {
       label: "Total Appointments",
-      value: summary ? formatNumber(summary.totalAppointments) : "0",
-      change: monthlyData ? `${monthlyData.period.month} ${monthlyData.period.year}` : `Year ${selectedYear}`,
+      value: monthlyData ? formatNumber(monthlyData.totalAppointments) : "0",
+      change: monthlyData ? `${monthlyData.monthName} ${monthlyData.year}` : `Year ${selectedYear}`,
       icon: "M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z",
       color: "yellow"
     },
     {
       label: "Avg Transaction",
-      value: formatCurrency(avgTransaction),
-      change: monthlyData ? `${monthlyData.period.month} ${monthlyData.period.year}` : `Year ${selectedYear}`,
+      value: monthlyData ? formatCurrency(monthlyData.avgTransaction) : "LKR 0",
+      change: monthlyData ? `${monthlyData.monthName} ${monthlyData.year}` : `Year ${selectedYear}`,
       icon: "M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z",
-      color: "yellow"
-    },
-    {
-      label: "Unique Customers",
-      value: summary ? formatNumber(summary.uniqueCustomers) : "0",
-      change: monthlyData ? `${monthlyData.period.month} ${monthlyData.period.year}` : `Year ${selectedYear}`,
-      icon: "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z",
       color: "yellow"
     }
   ];
-
-  // Color palette for categories
-  const categoryColors = ['#f59e0b', '#d97706', '#92400e', '#78350f', '#451a03', '#fbbf24', '#eab308'];
-
-  // Process category revenue with colors
-  const categoryRevenue = monthlyData?.revenueByCategory || [];
-  const categoryRevenueWithColors = categoryRevenue.map((cat, index) => ({
-    ...cat,
-    color: categoryColors[index % categoryColors.length]
-  }));
 
   // Calculate max revenue for staff chart
   const staffRevenue = monthlyData?.revenueByStaff || [];
@@ -209,38 +207,131 @@ export default function RevenuePage() {
             </div>
           )}
 
-          {/* Month/Year Selector and Export */}
+          {/* Filter Controls */}
           <div className="flex items-center justify-between" style={{ marginBottom: `${spacing}px` }}>
-            <div className="flex items-center gap-3">
-              {/* Month Selector */}
-              <select
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                className="bg-zinc-900 border border-zinc-800 rounded-lg text-white"
+            <div className="flex items-center gap-2">
+              {/* Current Month Button */}
+              <button
+                onClick={() => {
+                  setFilterMode('current');
+                  setIsFilterOpen(false);
+                }}
+                className={`rounded-lg transition-colors ${
+                  filterMode === 'current'
+                    ? 'bg-yellow-400 text-black font-semibold'
+                    : 'bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-white'
+                }`}
                 style={{ padding: `${spacing / 2}px ${cardPadding}px`, fontSize: `${responsive.fontSize.body}px` }}
               >
-                {monthOptions.map((month) => (
-                  <option key={month.value} value={month.value}>
-                    {month.label}
-                  </option>
-                ))}
-              </select>
+                Current Month
+              </button>
 
-              {/* Year Selector */}
-              <select
-                value={selectedYear}
-                onChange={(e) => setSelectedYear(Number(e.target.value))}
-                className="bg-zinc-900 border border-zinc-800 rounded-lg text-white"
-                style={{ padding: `${spacing / 2}px ${cardPadding}px`, fontSize: `${responsive.fontSize.body}px` }}
-              >
-                {yearOptions.map((year) => (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                ))}
-              </select>
+              {/* Filter Dropdown */}
+              <div className="relative filter-dropdown-container">
+                <button
+                  onClick={() => setIsFilterOpen(!isFilterOpen)}
+                  className={`rounded-lg transition-colors flex items-center gap-2 ${
+                    filterMode !== 'current'
+                      ? 'bg-yellow-400 text-black font-semibold'
+                      : 'bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-white'
+                  }`}
+                  style={{ padding: `${spacing / 2}px ${cardPadding}px`, fontSize: `${responsive.fontSize.body}px` }}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                  </svg>
+                  Filter
+                  <svg className={`w-4 h-4 transition-transform ${isFilterOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {/* Filter Dropdown Panel */}
+                {isFilterOpen && (
+                  <div
+                    className="absolute top-full left-0 mt-2 bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl z-50"
+                    style={{ minWidth: '280px', padding: `${cardPadding}px` }}
+                  >
+                    {/* Last Month Option */}
+                    <button
+                      onClick={() => {
+                        setFilterMode('last');
+                        setIsFilterOpen(false);
+                      }}
+                      className="w-full text-left bg-zinc-800/50 hover:bg-zinc-800 rounded-lg transition-colors"
+                      style={{ padding: `${spacing}px ${cardPadding}px`, fontSize: `${responsive.fontSize.body}px`, marginBottom: `${spacing}px` }}
+                    >
+                      <div className="font-semibold">Last Month</div>
+                      <div className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.small}px` }}>
+                        View previous month data
+                      </div>
+                    </button>
+
+                    {/* Custom Date Selection */}
+                    <div
+                      className="bg-zinc-800/50 rounded-lg"
+                      style={{ padding: `${spacing}px ${cardPadding}px` }}
+                    >
+                      <div className="font-semibold" style={{ fontSize: `${responsive.fontSize.body}px`, marginBottom: `${spacing}px` }}>
+                        Custom Date Range
+                      </div>
+
+                      {/* Month Selector */}
+                      <div style={{ marginBottom: `${spacing}px` }}>
+                        <label className="text-zinc-400 block" style={{ fontSize: `${responsive.fontSize.small}px`, marginBottom: `${spacing / 3}px` }}>
+                          Month
+                        </label>
+                        <select
+                          value={selectedMonth}
+                          onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                          className="w-full bg-zinc-900 border border-zinc-700 rounded-lg text-white"
+                          style={{ padding: `${spacing / 2}px ${cardPadding}px`, fontSize: `${responsive.fontSize.body}px` }}
+                        >
+                          {monthOptions.map((month) => (
+                            <option key={month.value} value={month.value}>
+                              {month.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Year Selector */}
+                      <div style={{ marginBottom: `${spacing}px` }}>
+                        <label className="text-zinc-400 block" style={{ fontSize: `${responsive.fontSize.small}px`, marginBottom: `${spacing / 3}px` }}>
+                          Year
+                        </label>
+                        <select
+                          value={selectedYear}
+                          onChange={(e) => setSelectedYear(Number(e.target.value))}
+                          className="w-full bg-zinc-900 border border-zinc-700 rounded-lg text-white"
+                          style={{ padding: `${spacing / 2}px ${cardPadding}px`, fontSize: `${responsive.fontSize.body}px` }}
+                        >
+                          {yearOptions.map((year) => (
+                            <option key={year} value={year}>
+                              {year}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Apply Button */}
+                      <button
+                        onClick={() => {
+                          setFilterMode('custom');
+                          setIsFilterOpen(false);
+                        }}
+                        className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-semibold rounded-lg transition-colors"
+                        style={{ padding: `${spacing / 2}px ${cardPadding}px`, fontSize: `${responsive.fontSize.body}px` }}
+                      >
+                        Apply Filter
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
+            {/* Export Button */}
             <button
               className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-white rounded-lg transition-colors flex items-center gap-2"
               style={{ padding: `${spacing}px ${cardPadding * 1.5}px`, fontSize: `${responsive.fontSize.body}px` }}
@@ -360,85 +451,52 @@ export default function RevenuePage() {
             )}
           </div>
 
-          {/* Bottom Charts */}
+          {/* Revenue by Staff Member */}
           <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
-              gap: `${spacing}px`
-            }}
+            className="bg-zinc-900 rounded-xl border border-zinc-800"
+            style={{ padding: `${cardPadding * 1.5}px` }}
           >
-            {/* Revenue by Service Category */}
-            <div
-              className="bg-zinc-900 rounded-xl border border-zinc-800"
-              style={{ padding: `${cardPadding * 1.5}px` }}
-            >
-              <h3 className="font-bold" style={{ fontSize: `${responsive.fontSize.subheading}px`, marginBottom: `${spacing}px` }}>
-                Revenue by Service Category
-              </h3>
+            <h3 className="font-bold" style={{ fontSize: `${responsive.fontSize.subheading}px`, marginBottom: `${spacing}px` }}>
+              Revenue by Staff Member
+            </h3>
 
-              <div className="flex items-center gap-8">
-                {/* Pie Chart Placeholder */}
-                <div className="relative" style={{ width: '160px', height: '160px' }}>
-                  <div className="absolute inset-0 rounded-full border-8 border-zinc-800"></div>
-                  <div className="absolute inset-0 rounded-full border-8 border-yellow-400" style={{ clipPath: 'polygon(50% 50%, 50% 0%, 100% 0%, 100% 100%, 50% 100%)' }}></div>
-                  <div className="absolute inset-0 rounded-full border-8 border-yellow-600" style={{ clipPath: 'polygon(50% 50%, 100% 50%, 100% 100%, 50% 100%)' }}></div>
-                </div>
+            <div className="space-y-4">
+              {staffRevenue.length > 0 ? (
+                staffRevenue.map((staff) => {
+                  // Calculate average transaction on the frontend
+                  const avgTransaction = staff.appointmentCount > 0
+                    ? staff.totalRevenue / staff.appointmentCount
+                    : 0;
 
-                {/* Legend */}
-                <div className="flex-1 space-y-2">
-                  {categoryRevenueWithColors.length > 0 ? (
-                    categoryRevenueWithColors.map((item) => (
-                      <div key={item.category} className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
-                          <span style={{ fontSize: `${responsive.fontSize.small}px` }}>{item.category}</span>
+                  return (
+                    <div key={staff.staffId}>
+                      <div className="flex items-center justify-between" style={{ marginBottom: `${spacing / 2}px` }}>
+                        <div>
+                          <div className="font-semibold" style={{ fontSize: `${responsive.fontSize.body}px` }}>
+                            {staff.staffName}
+                          </div>
+                          <div className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.small}px` }}>
+                            {staff.appointmentCount} appointments • Avg: {formatCurrency(avgTransaction)}
+                          </div>
                         </div>
-                        <span className="font-semibold" style={{ fontSize: `${responsive.fontSize.small}px` }}>
-                          {formatCurrency(item.totalRevenue)}
+                        <span className="font-bold text-yellow-400" style={{ fontSize: `${responsive.fontSize.subheading}px` }}>
+                          {formatCurrency(staff.totalRevenue)}
                         </span>
                       </div>
-                    ))
-                  ) : (
-                    <div className="text-zinc-400 text-center py-4" style={{ fontSize: `${responsive.fontSize.body}px` }}>
-                      No category data available
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Revenue by Staff Member */}
-            <div
-              className="bg-zinc-900 rounded-xl border border-zinc-800"
-              style={{ padding: `${cardPadding * 1.5}px` }}
-            >
-              <h3 className="font-bold" style={{ fontSize: `${responsive.fontSize.subheading}px`, marginBottom: `${spacing}px` }}>
-                Revenue by Staff Member
-              </h3>
-
-              <div className="space-y-3">
-                {staffRevenue.length > 0 ? (
-                  staffRevenue.map((staff) => (
-                    <div key={staff.staffName}>
-                      <div className="flex items-center justify-between text-zinc-400" style={{ fontSize: `${responsive.fontSize.small}px`, marginBottom: `${spacing / 3}px` }}>
-                        <span>{staff.staffName}</span>
-                        <span className="font-semibold">{formatCurrency(staff.totalRevenue)}</span>
-                      </div>
-                      <div className="w-full bg-zinc-800 rounded-full h-2">
+                      <div className="w-full bg-zinc-800 rounded-full h-3">
                         <div
-                          className="bg-yellow-400 h-2 rounded-full transition-all"
+                          className="bg-yellow-400 h-3 rounded-full transition-all"
                           style={{ width: `${(staff.totalRevenue / maxStaffRevenue) * 100}%` }}
                         ></div>
                       </div>
                     </div>
-                  ))
-                ) : (
-                  <div className="text-zinc-400 text-center py-4" style={{ fontSize: `${responsive.fontSize.body}px` }}>
-                    No staff revenue data available
-                  </div>
-                )}
-              </div>
+                  );
+                })
+              ) : (
+                <div className="text-zinc-400 text-center py-8" style={{ fontSize: `${responsive.fontSize.body}px` }}>
+                  No staff revenue data available
+                </div>
+              )}
             </div>
           </div>
         </div>

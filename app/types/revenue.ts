@@ -1,65 +1,31 @@
 /**
  * Revenue Types
- * Types for revenue-related API responses (Updated for new consolidated endpoints)
+ * Types for revenue-related API responses (Updated to match actual API structure)
  */
 
 // ==================== MONTHLY REVENUE TYPES ====================
 
-export interface RevenuePeriod {
-  month: string;
-  monthNumber: number;
-  year: number;
-  startDate: string;
-  endDate: string;
-}
-
-export interface RevenueSummary {
-  totalRevenue: number;
-  totalAppointments: number;
-  uniqueCustomers: number;
-}
-
 export interface RevenueByStaffItem {
-  staffId: number;
+  staffId: string;
   staffName: string;
+  staffPhoneNumber?: string;
   totalRevenue: number;
   appointmentCount: number;
-}
-
-export interface RevenueByCategoryItem {
-  category: string;
-  totalRevenue: number;
-  serviceCount: number;
-}
-
-export interface DailyRevenueItem {
-  date: string;
-  revenue: number;
-  appointmentCount: number;
-}
-
-export interface AppointmentDetails {
-  id: number;
-  appointmentDate: string;
-  clientName: string;
-  staffName: string;
-  services: string[];
-  totalPrice: number;
-  status: string;
 }
 
 export interface MonthlyRevenueData {
-  period: RevenuePeriod;
-  summary: RevenueSummary;
+  month: number;
+  monthName: string;
+  year: number;
+  totalRevenue: number;
+  totalAppointments: number;
+  avgTransaction: number;
   revenueByStaff: RevenueByStaffItem[];
-  revenueByCategory: RevenueByCategoryItem[];
-  dailyBreakdown: DailyRevenueItem[];
-  appointments: AppointmentDetails[];
 }
 
 export interface MonthlyRevenueResponse {
   success: boolean;
-  data: MonthlyRevenueData;
+  data: MonthlyRevenueData | null;
   message?: string;
 }
 
