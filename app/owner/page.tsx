@@ -5,9 +5,7 @@ import { useRouter } from "next/navigation";
 import { useScreenSize, getResponsiveValues, getResponsiveFontSize } from "@/app/hooks/useScreenSize";
 import { useAuth } from "@/app/context/AuthContext";
 import UserProfile from "@/app/components/UserProfile";
-import AppointmentSlidePanel from "@/app/components/calendar/AppointmentSlidePanel";
 import { apiGet } from "@/app/utils/api";
-import { Appointment } from "@/app/utils/calendarUtils";
 
 interface BackendAppointment {
   _id: string;
@@ -55,7 +53,6 @@ export default function OwnerDashboard() {
 
   const [appointments, setAppointments] = useState<DashboardAppointment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isAppointmentPanelOpen, setIsAppointmentPanelOpen] = useState(false);
 
   // Get first name for greeting
   const getFirstName = () => {
@@ -164,38 +161,6 @@ export default function OwnerDashboard() {
   const stats = getTodayStats();
   const upcomingAppointments = getUpcomingAppointments();
 
-  // Handle appointment save
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleAppointmentSave = (appointment: Appointment) => {
-    setIsAppointmentPanelOpen(false);
-    // Refresh appointments data
-    const fetchAppointments = async () => {
-      const response = await apiGet<BackendAppointment[]>('/appointments');
-      if (response.success && response.data) {
-        const transformedAppointments: DashboardAppointment[] = response.data.map((apt) => {
-          const appointmentDate = new Date(apt.appointmentDate);
-          const hours = appointmentDate.getHours();
-          const minutes = appointmentDate.getMinutes();
-          const ampm = hours >= 12 ? 'PM' : 'AM';
-          const displayHours = hours % 12 || 12;
-          const timeStr = `${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`;
-          const serviceNames = apt.services.map(s => s.name).join(', ');
-          return {
-            id: apt._id,
-            name: apt.customer?.name || 'Unknown Client',
-            service: serviceNames || 'Service',
-            time: timeStr,
-            phone: apt.customer?.phoneNumber || '',
-            status: apt.status?.toLowerCase() || 'pending',
-            dateTime: appointmentDate,
-          };
-        });
-        setAppointments(transformedAppointments);
-      }
-    };
-    fetchAppointments();
-  };
-
   // Quick actions data
   const quickActions = [
     {
@@ -209,7 +174,7 @@ export default function OwnerDashboard() {
       ),
       bgColor: "bg-blue-500/10",
       iconColor: "text-blue-500",
-      onClick: () => setIsAppointmentPanelOpen(true),
+      onClick: () => router.push('/owner/appointments'),
     },
     {
       id: 2,
@@ -475,14 +440,6 @@ export default function OwnerDashboard() {
           </div>
         </div>
       </div>
-
-      {/* Appointment Slide Panel */}
-      <AppointmentSlidePanel
-        isOpen={isAppointmentPanelOpen}
-        onClose={() => setIsAppointmentPanelOpen(false)}
-        appointment={null}
-        onSave={handleAppointmentSave}
-      />
     </>
   );
 }
