@@ -12,6 +12,8 @@ import {
   MonthlyRevenueData,
   RevenueTrendItem
 } from "@/app/types/revenue";
+import { pdf } from '@react-pdf/renderer';
+import { RevenuePDF } from "@/app/components/revenue/RevenuePDF";
 
 export default function RevenuePage() {
   const { width, height } = useScreenSize();
@@ -166,6 +168,36 @@ export default function RevenuePage() {
   const maxStaffRevenue = staffRevenue.length > 0
     ? Math.max(...staffRevenue.map(s => s.totalRevenue))
     : 1;
+
+  // Handle PDF Export
+  const handleExportPDF = async () => {
+    if (!monthlyData) {
+      alert('No data available to export');
+      return;
+    }
+
+    try {
+      // Generate PDF
+      const blob = await pdf(<RevenuePDF data={monthlyData} />).toBlob();
+
+      // Create download link
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Revenue_Report_${monthlyData.monthName}_${monthlyData.year}.pdf`;
+
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+
+      // Cleanup
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Failed to generate PDF. Please try again.');
+    }
+  };
 
   return (
     <>
@@ -333,7 +365,13 @@ export default function RevenuePage() {
 
             {/* Export Button */}
             <button
-              className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-white rounded-lg transition-colors flex items-center gap-2"
+              onClick={handleExportPDF}
+              disabled={!monthlyData || isLoading}
+              className={`rounded-lg transition-colors flex items-center gap-2 ${
+                !monthlyData || isLoading
+                  ? 'bg-zinc-900/50 border border-zinc-800 text-zinc-600 cursor-not-allowed'
+                  : 'bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-white hover:border-yellow-400'
+              }`}
               style={{ padding: `${spacing}px ${cardPadding * 1.5}px`, fontSize: `${responsive.fontSize.body}px` }}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
