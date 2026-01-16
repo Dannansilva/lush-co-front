@@ -124,6 +124,7 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
                 <Link
                   key={item.name}
                   href={item.path}
+                  onClick={() => !isDesktop && setIsMobileMenuOpen(false)}
                   className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} rounded-lg transition-colors ${
                     isActive ? "bg-yellow-400/10 text-yellow-400" : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
                   }`}
@@ -155,6 +156,19 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
 
         {/* Main Content */}
         <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Mobile Hamburger Button */}
+          {!isDesktop && (
+            <button
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="fixed top-4 left-4 z-30 bg-yellow-400 text-black p-3 rounded-lg shadow-lg hover:bg-yellow-500 transition-colors"
+              aria-label="Open menu"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          )}
+
           {children}
         </div>
       </div>
