@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { useScreenSize, getResponsiveValues } from '@/app/hooks/useScreenSize';
 import { Appointment } from '@/app/utils/calendarUtils';
+import ShareBillModal from '../appointment/ShareBillModal';
 
 interface AllAppointmentsViewProps {
   appointments: Appointment[];
@@ -23,6 +24,8 @@ export default function AllAppointmentsView({
   const [filterDateFrom, setFilterDateFrom] = useState<string>('');
   const [filterDateTo, setFilterDateTo] = useState<string>('');
   const [sortBy, setSortBy] = useState<'date' | 'status'>('date');
+  const [shareBillModalOpen, setShareBillModalOpen] = useState(false);
+  const [selectedBillAppointment, setSelectedBillAppointment] = useState<Appointment | null>(null);
 
   const isMobile = responsive.device.isMobile;
   const isTablet = responsive.device.isTablet;
@@ -64,6 +67,10 @@ export default function AllAppointmentsView({
         return 'bg-green-500/10 text-green-400 border-green-500/20';
       case 'pending':
         return 'bg-orange-500/10 text-orange-400 border-orange-500/20';
+      case 'in_progress':
+        return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+      case 'completed':
+        return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
       case 'cancelled':
         return 'bg-red-500/10 text-red-400 border-red-500/20';
       default:
@@ -115,6 +122,8 @@ export default function AllAppointmentsView({
               <option value="all">All Statuses</option>
               <option value="confirmed">Confirmed</option>
               <option value="pending">Pending</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
               <option value="cancelled">Cancelled</option>
             </select>
           </div>
@@ -228,8 +237,7 @@ export default function AllAppointmentsView({
             {filteredAppointments.map((appointment) => (
               <div
                 key={appointment.id}
-                onClick={() => onAppointmentClick(appointment)}
-                className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-lg cursor-pointer transition-colors"
+                className="bg-zinc-900 border border-zinc-800 rounded-lg"
                 style={{ padding: `${cardPadding}px` }}
               >
                 {/* Header with Status */}
@@ -363,11 +371,60 @@ export default function AllAppointmentsView({
                     </span>
                   </div>
                 </div>
+
+                {/* Action Buttons */}
+                <div
+                  className="flex gap-2 mt-3 pt-3 border-t border-zinc-800"
+                  style={{ marginTop: `${spacing}px` }}
+                >
+                  {/* View Details Button */}
+                  <button
+                    onClick={() => onAppointmentClick(appointment)}
+                    className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+                    style={{ padding: `${spacing / 2}px ${cardPadding}px`, fontSize: `${responsive.fontSize.small}px` }}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                    View
+                  </button>
+
+                  {/* Share Bill Button - Only for completed appointments */}
+                  {appointment.status === 'completed' && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedBillAppointment(appointment);
+                        setShareBillModalOpen(true);
+                      }}
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+                      style={{ padding: `${spacing / 2}px ${cardPadding}px`, fontSize: `${responsive.fontSize.small}px` }}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      Share Bill
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {/* Share Bill Modal */}
+      {selectedBillAppointment && (
+        <ShareBillModal
+          isOpen={shareBillModalOpen}
+          onClose={() => {
+            setShareBillModalOpen(false);
+            setSelectedBillAppointment(null);
+          }}
+          appointment={selectedBillAppointment}
+        />
+      )}
     </div>
   );
 }
