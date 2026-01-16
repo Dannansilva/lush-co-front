@@ -215,18 +215,20 @@ export default function StaffPage() {
   return (
     <>
       {/* Header */}
-      <div
-        className="border-b border-zinc-800 flex items-center justify-between flex-shrink-0"
-        style={{ padding: `${spacing}px ${cardPadding}px` }}
-      >
-        <div>
-          <h1 className="font-bold" style={{ fontSize: `${responsive.fontSize.heading}px` }}>Staff Management</h1>
-          <p className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.body}px` }}>Manage your salon team and track performance</p>
-        </div>
+      {width > 1024 && (
+        <div
+          className="border-b border-zinc-800 flex items-center justify-between flex-shrink-0"
+          style={{ padding: `${spacing}px ${cardPadding}px` }}
+        >
+          <div>
+            <h1 className="font-bold" style={{ fontSize: `${responsive.fontSize.heading}px` }}>Staff Management</h1>
+            <p className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.body}px` }}>Manage your salon team and track performance</p>
+          </div>
 
-        {/* User Profile */}
-        <UserProfile showSearch={false} />
-      </div>
+          {/* User Profile */}
+          <UserProfile showSearch={false} />
+        </div>
+      )}
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">

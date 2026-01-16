@@ -314,18 +314,20 @@ export default function ClientsPage() {
   return (
     <>
       {/* Header */}
-      <div
-        className="border-b border-zinc-800 flex items-center justify-between flex-shrink-0"
-        style={{ padding: `${spacing}px ${cardPadding}px` }}
-      >
-        <div>
-          <h1 className="font-bold" style={{ fontSize: `${responsive.fontSize.heading}px` }}>Client Management</h1>
-          <p className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.body}px` }}>Manage your clients and track their appointments</p>
-        </div>
+      {width > 1024 && (
+        <div
+          className="border-b border-zinc-800 flex items-center justify-between flex-shrink-0"
+          style={{ padding: `${spacing}px ${cardPadding}px` }}
+        >
+          <div>
+            <h1 className="font-bold" style={{ fontSize: `${responsive.fontSize.heading}px` }}>Client Management</h1>
+            <p className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.body}px` }}>Manage your clients and track their appointments</p>
+          </div>
 
-        {/* User Profile */}
-        <UserProfile showSearch={false} />
-      </div>
+          {/* User Profile */}
+          <UserProfile showSearch={false} />
+        </div>
+      )}
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">

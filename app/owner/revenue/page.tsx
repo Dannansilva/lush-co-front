@@ -202,18 +202,20 @@ export default function RevenuePage() {
   return (
     <>
       {/* Header */}
-      <div
-        className="border-b border-zinc-800 flex items-center justify-between flex-shrink-0"
-        style={{ padding: `${spacing}px ${cardPadding}px` }}
-      >
-        <div>
-          <h1 className="font-bold" style={{ fontSize: `${responsive.fontSize.heading}px` }}>Revenue Reports</h1>
-          <p className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.body}px` }}>Financial overview and detailed analytics</p>
-        </div>
+      {width > 1024 && (
+        <div
+          className="border-b border-zinc-800 flex items-center justify-between flex-shrink-0"
+          style={{ padding: `${spacing}px ${cardPadding}px` }}
+        >
+          <div>
+            <h1 className="font-bold" style={{ fontSize: `${responsive.fontSize.heading}px` }}>Revenue Reports</h1>
+            <p className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.body}px` }}>Financial overview and detailed analytics</p>
+          </div>
 
-        {/* User Profile */}
-        <UserProfile showSearch={true} />
-      </div>
+          {/* User Profile */}
+          <UserProfile showSearch={true} />
+        </div>
+      )}
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">

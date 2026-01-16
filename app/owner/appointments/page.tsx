@@ -216,18 +216,20 @@ export default function AppointmentsPage() {
   return (
     <>
       {/* Header */}
-      <div
-        className="border-b border-zinc-800 flex items-center justify-between flex-shrink-0"
-        style={{ padding: `${spacing}px ${cardPadding}px` }}
-      >
-        <div>
-          <h1 className="font-bold" style={{ fontSize: `${responsive.fontSize.heading}px` }}>Appointments</h1>
-          <p className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.body}px` }}>View and manage all salon appointments</p>
-        </div>
+      {width > 1024 && (
+        <div
+          className="border-b border-zinc-800 flex items-center justify-between flex-shrink-0"
+          style={{ padding: `${spacing}px ${cardPadding}px` }}
+        >
+          <div>
+            <h1 className="font-bold" style={{ fontSize: `${responsive.fontSize.heading}px` }}>Appointments</h1>
+            <p className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.body}px` }}>View and manage all salon appointments</p>
+          </div>
 
-        {/* User Profile */}
-        <UserProfile showSearch={false} />
-      </div>
+          {/* User Profile */}
+          <UserProfile showSearch={false} />
+        </div>
+      )}
 
       {/* Content */}
       <div className="flex-1 flex flex-col overflow-hidden">

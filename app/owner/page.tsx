@@ -207,22 +207,24 @@ export default function OwnerDashboard() {
   return (
     <>
       {/* Header */}
-      <div
-        className="border-b border-zinc-800 flex items-center justify-between flex-shrink-0"
-        style={{ padding: `${spacing}px ${cardPadding}px` }}
-      >
-        <div className="flex items-center gap-4">
-          <div>
-            <h1 className="font-bold" style={{ fontSize: `${responsive.fontSize.heading}px` }}>Dashboard</h1>
-            <p className="text-yellow-400" style={{ fontSize: `${responsive.fontSize.body}px` }}>
-              Good morning, {getFirstName()}. Here&apos;s today&apos;s overview.
-            </p>
+      {width > 1024 && (
+        <div
+          className="border-b border-zinc-800 flex items-center justify-between flex-shrink-0"
+          style={{ padding: `${spacing}px ${cardPadding}px` }}
+        >
+          <div className="flex items-center gap-4">
+            <div>
+              <h1 className="font-bold" style={{ fontSize: `${responsive.fontSize.heading}px` }}>Dashboard</h1>
+              <p className="text-yellow-400" style={{ fontSize: `${responsive.fontSize.body}px` }}>
+                Good morning, {getFirstName()}. Here&apos;s today&apos;s overview.
+              </p>
+            </div>
           </div>
-        </div>
 
-        {/* User Profile */}
-        <UserProfile showSearch={false} />
-      </div>
+          {/* User Profile */}
+          <UserProfile showSearch={false} />
+        </div>
+      )}
 
       {/* Scrollable Content Area */}
       <div className="flex-1 overflow-y-auto flex flex-col">
@@ -232,13 +234,13 @@ export default function OwnerDashboard() {
           style={{
             padding: `${spacing}px ${cardPadding}px`,
             display: "grid",
-            gridTemplateColumns: isMobile ? "1fr" : width < 1280 ? "repeat(2, 1fr)" : "repeat(4, 1fr)",
+            gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : width < 1280 ? "repeat(2, 1fr)" : "repeat(4, 1fr)",
             gap: `${spacing}px`,
           }}
         >
-          <div className="bg-zinc-900 rounded-xl border border-zinc-800" style={{ padding: `${cardPadding}px` }}>
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-yellow-400 rounded-full flex items-center justify-center">
+          <div className="bg-zinc-900 rounded-xl border border-zinc-800" style={{ padding: `${isMobile ? cardPadding * 0.75 : cardPadding}px` }}>
+            <div className={`flex ${isMobile ? 'flex-col justify-center text-center gap-2' : 'items-center gap-3'}`}>
+              <div className={`rounded-full flex items-center justify-center bg-yellow-400 ${isMobile ? 'w-10 h-10' : 'w-12 h-12'}`}>
                 <svg className="w-6 h-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
@@ -252,9 +254,9 @@ export default function OwnerDashboard() {
             </div>
           </div>
 
-          <div className="bg-zinc-900 rounded-xl border border-zinc-800" style={{ padding: `${cardPadding}px` }}>
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-yellow-400 rounded-full flex items-center justify-center">
+          <div className="bg-zinc-900 rounded-xl border border-zinc-800" style={{ padding: `${isMobile ? cardPadding * 0.75 : cardPadding}px` }}>
+            <div className={`flex ${isMobile ? 'flex-col justify-center text-center gap-2' : 'items-center gap-3'}`}>
+              <div className={`rounded-full flex items-center justify-center bg-yellow-400 ${isMobile ? 'w-10 h-10' : 'w-12 h-12'}`}>
                 <svg className="w-6 h-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -268,9 +270,9 @@ export default function OwnerDashboard() {
             </div>
           </div>
 
-          <div className="bg-zinc-900 rounded-xl border border-zinc-800" style={{ padding: `${cardPadding}px` }}>
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-yellow-400 rounded-full flex items-center justify-center">
+          <div className="bg-zinc-900 rounded-xl border border-zinc-800" style={{ padding: `${isMobile ? cardPadding * 0.75 : cardPadding}px` }}>
+            <div className={`flex ${isMobile ? 'flex-col justify-center text-center gap-2' : 'items-center gap-3'}`}>
+              <div className={`rounded-full flex items-center justify-center bg-yellow-400 ${isMobile ? 'w-10 h-10' : 'w-12 h-12'}`}>
                 <svg className="w-6 h-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
@@ -284,9 +286,9 @@ export default function OwnerDashboard() {
             </div>
           </div>
 
-          <div className="bg-zinc-900 rounded-xl border border-zinc-800" style={{ padding: `${cardPadding}px` }}>
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-yellow-400 rounded-full flex items-center justify-center">
+          <div className="bg-zinc-900 rounded-xl border border-zinc-800" style={{ padding: `${isMobile ? cardPadding * 0.75 : cardPadding}px` }}>
+            <div className={`flex ${isMobile ? 'flex-col justify-center text-center gap-2' : 'items-center gap-3'}`}>
+              <div className={`rounded-full flex items-center justify-center bg-yellow-400 ${isMobile ? 'w-10 h-10' : 'w-12 h-12'}`}>
                 <svg className="w-6 h-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>

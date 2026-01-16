@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useScreenSize, getResponsiveValues } from "@/app/hooks/useScreenSize";
 import { useAuth } from "@/app/context/AuthContext";
 import ProtectedRoute from "@/app/components/ProtectedRoute";
+import UserProfile from "@/app/components/UserProfile";
 
 export default function OwnerLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -112,7 +113,7 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
           </div>
 
           {/* Menu */}
-          <div className="flex flex-col flex-1" style={{ gap: `${spacing}px` }}>
+          <div className="flex flex-col flex-1 overflow-y-auto min-h-0" style={{ gap: `${spacing}px` }}>
             {!isSidebarCollapsed && (
               <div className="text-zinc-500 uppercase tracking-wider" style={{ fontSize: `${responsive.fontSize.small}px`, marginBottom: `${spacing}px` }}>MENU</div>
             )}
@@ -156,17 +157,29 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
 
         {/* Main Content */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Mobile Hamburger Button */}
+          {/* Mobile Header */}
           {!isDesktop && (
-            <button
-              onClick={() => setIsMobileMenuOpen(true)}
-              className="fixed top-4 left-4 z-30 bg-yellow-400 text-black p-3 rounded-lg shadow-lg hover:bg-yellow-500 transition-colors"
-              aria-label="Open menu"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
+            <div className="flex-shrink-0 flex items-center justify-between p-4 border-b border-zinc-800 bg-black z-30">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setIsMobileMenuOpen(true)}
+                  className="bg-yellow-400 text-black p-2 rounded-lg shadow-lg hover:bg-yellow-500 transition-colors"
+                  aria-label="Open menu"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </button>
+                <div className="font-bold text-white text-lg">
+                  {menuItems.find(
+                    (item) =>
+                      pathname === item.path ||
+                      (item.path !== "/owner" && pathname.startsWith(item.path))
+                  )?.name || "Dashboard"}
+                </div>
+              </div>
+              <UserProfile showSearch={false} />
+            </div>
           )}
 
           {children}
