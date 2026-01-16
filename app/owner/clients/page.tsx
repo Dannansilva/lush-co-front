@@ -40,29 +40,31 @@ function Modal({ isOpen, onClose, title, children, cardPadding, spacing, respons
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/60" onClick={onClose}></div>
-      <div
-        className="relative bg-zinc-900 rounded-xl border border-zinc-800 w-full max-w-md mx-4"
-        style={{ padding: `${cardPadding * 2}px` }}
-      >
-        <div className="flex items-center justify-between" style={{ marginBottom: `${spacing * 1.5}px` }}>
-          <div>
-            <h2 className="font-bold" style={{ fontSize: `${responsiveFontSize.heading}px` }}>{title}</h2>
-            <p className="text-zinc-400" style={{ fontSize: `${responsiveFontSize.small}px` }}>
-              Fill in the details for the {title.toLowerCase().includes('edit') ? 'client' : 'new client'}.
-            </p>
+    <div className="fixed inset-0 z-50 overflow-y-auto">
+      <div className="fixed inset-0 bg-black/60" onClick={onClose}></div>
+      <div className="flex min-h-full items-center justify-center p-4">
+        <div
+          className="relative bg-zinc-900 rounded-xl border border-zinc-800 w-full max-w-md"
+          style={{ padding: `${cardPadding * 2}px` }}
+        >
+          <div className="flex items-center justify-between" style={{ marginBottom: `${spacing * 1.5}px` }}>
+            <div>
+              <h2 className="font-bold" style={{ fontSize: `${responsiveFontSize.heading}px` }}>{title}</h2>
+              <p className="text-zinc-400" style={{ fontSize: `${responsiveFontSize.small}px` }}>
+                Fill in the details for the {title.toLowerCase().includes('edit') ? 'client' : 'new client'}.
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-zinc-400 hover:text-white transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            className="text-zinc-400 hover:text-white transition-colors"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          {children}
         </div>
-        {children}
       </div>
     </div>
   );
@@ -360,7 +362,7 @@ export default function ClientsPage() {
           </div>
 
           {/* Search and Add Button */}
-          <div className="flex items-center justify-between" style={{ marginBottom: `${spacing}px` }}>
+          <div className="flex items-center justify-between gap-3" style={{ marginBottom: `${spacing}px` }}>
             <div className="relative flex-1 max-w-md">
               <input
                 type="text"
@@ -377,13 +379,17 @@ export default function ClientsPage() {
 
             <button
               onClick={handleAddClient}
-              className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold rounded-lg transition-colors flex items-center gap-2"
-              style={{ padding: `${spacing}px ${cardPadding * 1.5}px`, fontSize: `${responsive.fontSize.body}px` }}
+              className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold rounded-lg transition-colors flex items-center justify-center gap-2 flex-shrink-0"
+              style={{ 
+                padding: isMobile ? `${spacing / 2}px` : `${spacing / 2}px ${cardPadding * 1.5}px`, 
+                fontSize: `${responsive.fontSize.body}px`,
+                aspectRatio: isMobile ? '1' : 'auto'
+              }}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
-              Add Client
+              {!isMobile && "Add Client"}
             </button>
           </div>
 

@@ -283,82 +283,90 @@ export default function RevenuePage() {
                 {/* Filter Dropdown Panel */}
                 {isFilterOpen && (
                   <div
-                    className="absolute top-full left-0 mt-2 bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl z-50"
-                    style={{ minWidth: '280px', padding: `${cardPadding}px` }}
+                    className={isMobile ? "fixed inset-0 z-50 flex items-center justify-center p-4" : "absolute top-full left-0 mt-2 z-50"}
+                    style={!isMobile ? { minWidth: '280px' } : undefined}
                   >
-                    {/* Last Month Option */}
-                    <button
-                      onClick={() => {
-                        setFilterMode('last');
-                        setIsFilterOpen(false);
-                      }}
-                      className="w-full text-left bg-zinc-800/50 hover:bg-zinc-800 rounded-lg transition-colors"
-                      style={{ padding: `${spacing}px ${cardPadding}px`, fontSize: `${responsive.fontSize.body}px`, marginBottom: `${spacing}px` }}
-                    >
-                      <div className="font-semibold">Last Month</div>
-                      <div className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.small}px` }}>
-                        View previous month data
-                      </div>
-                    </button>
-
-                    {/* Custom Date Selection */}
+                    {isMobile && (
+                      <div className="absolute inset-0 bg-black/60" onClick={() => setIsFilterOpen(false)}></div>
+                    )}
                     <div
-                      className="bg-zinc-800/50 rounded-lg"
-                      style={{ padding: `${spacing}px ${cardPadding}px` }}
+                      className={`bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl ${isMobile ? 'relative w-full max-w-sm' : ''}`}
+                      style={{ padding: `${cardPadding}px`, minWidth: isMobile ? undefined : '280px' }}
                     >
-                      <div className="font-semibold" style={{ fontSize: `${responsive.fontSize.body}px`, marginBottom: `${spacing}px` }}>
-                        Custom Date Range
-                      </div>
-
-                      {/* Month Selector */}
-                      <div style={{ marginBottom: `${spacing}px` }}>
-                        <label className="text-zinc-400 block" style={{ fontSize: `${responsive.fontSize.small}px`, marginBottom: `${spacing / 3}px` }}>
-                          Month
-                        </label>
-                        <select
-                          value={selectedMonth}
-                          onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                          className="w-full bg-zinc-900 border border-zinc-700 rounded-lg text-white"
-                          style={{ padding: `${spacing / 2}px ${cardPadding}px`, fontSize: `${responsive.fontSize.body}px` }}
-                        >
-                          {monthOptions.map((month) => (
-                            <option key={month.value} value={month.value}>
-                              {month.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {/* Year Selector */}
-                      <div style={{ marginBottom: `${spacing}px` }}>
-                        <label className="text-zinc-400 block" style={{ fontSize: `${responsive.fontSize.small}px`, marginBottom: `${spacing / 3}px` }}>
-                          Year
-                        </label>
-                        <select
-                          value={selectedYear}
-                          onChange={(e) => setSelectedYear(Number(e.target.value))}
-                          className="w-full bg-zinc-900 border border-zinc-700 rounded-lg text-white"
-                          style={{ padding: `${spacing / 2}px ${cardPadding}px`, fontSize: `${responsive.fontSize.body}px` }}
-                        >
-                          {yearOptions.map((year) => (
-                            <option key={year} value={year}>
-                              {year}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {/* Apply Button */}
+                      {/* Last Month Option */}
                       <button
                         onClick={() => {
-                          setFilterMode('custom');
+                          setFilterMode('last');
                           setIsFilterOpen(false);
                         }}
-                        className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-semibold rounded-lg transition-colors"
-                        style={{ padding: `${spacing / 2}px ${cardPadding}px`, fontSize: `${responsive.fontSize.body}px` }}
+                        className="w-full text-left bg-zinc-800/50 hover:bg-zinc-800 rounded-lg transition-colors"
+                        style={{ padding: `${spacing}px ${cardPadding}px`, fontSize: `${responsive.fontSize.body}px`, marginBottom: `${spacing}px` }}
                       >
-                        Apply Filter
+                        <div className="font-semibold">Last Month</div>
+                        <div className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.small}px` }}>
+                          View previous month data
+                        </div>
                       </button>
+
+                      {/* Custom Date Selection */}
+                      <div
+                        className="bg-zinc-800/50 rounded-lg"
+                        style={{ padding: `${spacing}px ${cardPadding}px` }}
+                      >
+                        <div className="font-semibold" style={{ fontSize: `${responsive.fontSize.body}px`, marginBottom: `${spacing}px` }}>
+                          Custom Date Range
+                        </div>
+
+                        {/* Month Selector */}
+                        <div style={{ marginBottom: `${spacing}px` }}>
+                          <label className="text-zinc-400 block" style={{ fontSize: `${responsive.fontSize.small}px`, marginBottom: `${spacing / 3}px` }}>
+                            Month
+                          </label>
+                          <select
+                            value={selectedMonth}
+                            onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg text-white"
+                            style={{ padding: `${spacing / 2}px ${cardPadding}px`, fontSize: `${responsive.fontSize.body}px` }}
+                          >
+                            {monthOptions.map((month) => (
+                              <option key={month.value} value={month.value}>
+                                {month.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Year Selector */}
+                        <div style={{ marginBottom: `${spacing}px` }}>
+                          <label className="text-zinc-400 block" style={{ fontSize: `${responsive.fontSize.small}px`, marginBottom: `${spacing / 3}px` }}>
+                            Year
+                          </label>
+                          <select
+                            value={selectedYear}
+                            onChange={(e) => setSelectedYear(Number(e.target.value))}
+                            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg text-white"
+                            style={{ padding: `${spacing / 2}px ${cardPadding}px`, fontSize: `${responsive.fontSize.body}px` }}
+                          >
+                            {yearOptions.map((year) => (
+                              <option key={year} value={year}>
+                                {year}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Apply Button */}
+                        <button
+                          onClick={() => {
+                            setFilterMode('custom');
+                            setIsFilterOpen(false);
+                          }}
+                          className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-semibold rounded-lg transition-colors"
+                          style={{ padding: `${spacing / 2}px ${cardPadding}px`, fontSize: `${responsive.fontSize.body}px` }}
+                        >
+                          Apply Filter
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -369,14 +377,14 @@ export default function RevenuePage() {
             <button
               onClick={handleExportPDF}
               disabled={!monthlyData || isLoading}
-              className={`rounded-lg transition-colors flex items-center gap-2 ${
+              className={`rounded-lg transition-colors flex items-center gap-2 whitespace-nowrap ${
                 !monthlyData || isLoading
                   ? 'bg-zinc-900/50 border border-zinc-800 text-zinc-600 cursor-not-allowed'
                   : 'bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-white hover:border-yellow-400'
               }`}
-              style={{ padding: `${spacing}px ${cardPadding * 1.5}px`, fontSize: `${responsive.fontSize.body}px` }}
+              style={{ padding: `${spacing / 2}px ${cardPadding}px`, fontSize: `${responsive.fontSize.body}px` }}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
               Export Report
