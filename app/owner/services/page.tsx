@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useScreenSize, getResponsiveValues } from "@/app/hooks/useScreenSize";
 import { apiGet, apiPost, apiPut, apiDelete } from "@/app/utils/api";
 import UserProfile from "@/app/components/UserProfile";
+import { useSearch } from "@/app/context/SearchContext";
 
 interface Service {
   _id: string;
@@ -75,6 +76,7 @@ function Modal({ isOpen, onClose, title, subtitle, children, cardPadding, spacin
 export default function ServicesPage() {
   const { width, height } = useScreenSize();
   const responsive = getResponsiveValues(width, height);
+  const { searchQuery } = useSearch();
 
   const cardPadding = Math.max(12, Math.min(width * 0.015, 20));
   const spacing = Math.max(12, Math.min(width * 0.02, 16));
@@ -91,6 +93,19 @@ export default function ServicesPage() {
   const [deletingService, setDeletingService] = useState<Service | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Filter services based on search query
+  const filteredCategories = useMemo(() => {
+    if (!searchQuery) return serviceCategories;
+
+    return serviceCategories.map(category => ({
+      ...category,
+      services: category.services.filter(service => 
+        service.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        service.description.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    })).filter(category => category.services.length > 0);
+  }, [serviceCategories, searchQuery]);
 
   // Create category map from fetched categories
   const categoryMap: Record<string, { name: string; icon: string }> = useMemo(() => {
@@ -329,20 +344,8 @@ export default function ServicesPage() {
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
         <div style={{ padding: `${spacing}px ${cardPadding}px` }}>
-          {/* Search and Add Button */}
-          <div className="flex items-center justify-between gap-3" style={{ marginBottom: `${spacing}px` }}>
-            <div className="relative flex-1 max-w-md">
-              <input
-                type="text"
-                placeholder="Search services..."
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-lg text-white placeholder-zinc-500"
-                style={{ padding: `${spacing}px ${cardPadding}px`, fontSize: `${responsive.fontSize.body}px` }}
-              />
-              <svg className="w-5 h-5 text-zinc-500 absolute right-3 top-1/2 transform -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-
+          {/* Add Button */}
+          <div className="flex items-center justify-end" style={{ marginBottom: `${spacing}px` }}>
             <button
               onClick={handleAddService}
               className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold rounded-lg transition-colors flex items-center justify-center gap-2 flex-shrink-0"
@@ -366,16 +369,16 @@ export default function ServicesPage() {
                 Loading services...
               </div>
             </div>
-          ) : serviceCategories.length === 0 ? (
+          ) : filteredCategories.length === 0 ? (
             <div className="flex items-center justify-center" style={{ padding: `${spacing * 4}px` }}>
               <div className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.body}px` }}>
-                No services found. Add your first service!
+                {searchQuery ? `No services found matching "${searchQuery}"` : "No services found. Add your first service!"}
               </div>
             </div>
           ) : (
             /* Service Categories */
             <div style={{ display: 'flex', flexDirection: 'column', gap: `${spacing * 2}px` }}>
-              {serviceCategories.map((category) => (
+              {filteredCategories.map((category) => (
                 <div key={category.id}>
                   {/* Category Header */}
                   <div className="flex items-center justify-between" style={{ marginBottom: `${spacing}px` }}>
@@ -392,7 +395,7 @@ export default function ServicesPage() {
                       className="px-3 py-1 bg-yellow-400/10 text-yellow-400 rounded-full font-semibold"
                       style={{ fontSize: `${responsive.fontSize.small}px` }}
                     >
-                      {category.count} services
+                      {category.services.length} services
                     </span>
                   </div>
 

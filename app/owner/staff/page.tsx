@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useScreenSize, getResponsiveValues } from "@/app/hooks/useScreenSize";
 import { apiGet, apiPost, apiPut, apiDelete } from "@/app/utils/api";
 import UserProfile from "@/app/components/UserProfile";
+import { useSearch } from "@/app/context/SearchContext";
 
 // Backend API response interface
 interface StaffMemberApi {
@@ -73,6 +74,7 @@ function Modal({ isOpen, onClose, title, children, cardPadding, spacing, respons
 export default function StaffPage() {
   const { width, height } = useScreenSize();
   const responsive = getResponsiveValues(width, height);
+  const { searchQuery } = useSearch();
 
   const cardPadding = Math.max(12, Math.min(width * 0.015, 20));
   const spacing = Math.max(12, Math.min(width * 0.02, 16));
@@ -112,6 +114,12 @@ export default function StaffPage() {
 
     fetchStaff();
   }, []);
+
+  // Filter staff based on search query
+  const filteredStaff = staff.filter(member => 
+    member.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    member.phoneNumber.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   // Form state
   const [formData, setFormData] = useState({
@@ -233,20 +241,8 @@ export default function StaffPage() {
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
         <div style={{ padding: `${spacing}px ${cardPadding}px` }}>
-          {/* Search and Add Button */}
-          <div className="flex items-center justify-between gap-3" style={{ marginBottom: `${spacing}px` }}>
-            <div className="relative flex-1 max-w-md">
-              <input
-                type="text"
-                placeholder="Search staff members..."
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-lg text-white placeholder-zinc-500"
-                style={{ padding: `${spacing}px ${cardPadding}px`, fontSize: `${responsive.fontSize.body}px` }}
-              />
-              <svg className="w-5 h-5 text-zinc-500 absolute right-3 top-1/2 transform -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-
+          {/* Add Button */}
+          <div className="flex items-center justify-end" style={{ marginBottom: `${spacing}px` }}>
             <button
               onClick={handleAddStaff}
               className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold rounded-lg transition-colors flex items-center justify-center gap-2 flex-shrink-0"
@@ -289,18 +285,22 @@ export default function StaffPage() {
           )}
 
           {/* Empty State */}
-          {!loading && !error && staff.length === 0 && (
+          {!loading && !error && filteredStaff.length === 0 && (
             <div className="text-center" style={{ padding: `${spacing * 3}px` }}>
               <svg className="w-16 h-16 text-zinc-600 mx-auto" style={{ marginBottom: `${spacing}px` }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
-              <p className="text-zinc-400 font-semibold" style={{ fontSize: `${responsive.fontSize.body}px`, marginBottom: `${spacing / 2}px` }}>No staff members yet</p>
-              <p className="text-zinc-500" style={{ fontSize: `${responsive.fontSize.small}px` }}>Add your first team member to get started</p>
+              <p className="text-zinc-400 font-semibold" style={{ fontSize: `${responsive.fontSize.body}px`, marginBottom: `${spacing / 2}px` }}>
+                {searchQuery ? `No staff members found matching "${searchQuery}"` : "No staff members yet"}
+              </p>
+              {!searchQuery && (
+                <p className="text-zinc-500" style={{ fontSize: `${responsive.fontSize.small}px` }}>Add your first team member to get started</p>
+              )}
             </div>
           )}
 
           {/* Staff Grid */}
-          {!loading && !error && staff.length > 0 && (
+          {!loading && !error && filteredStaff.length > 0 && (
             <div
               style={{
                 display: 'grid',
@@ -308,7 +308,7 @@ export default function StaffPage() {
                 gap: `${spacing}px`
               }}
             >
-              {staff.map((member) => (
+              {filteredStaff.map((member) => (
                 <div
                   key={member._id}
                   className="bg-zinc-900 rounded-xl border border-zinc-800 hover:border-zinc-700 transition-colors"

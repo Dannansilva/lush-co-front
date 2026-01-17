@@ -14,10 +14,12 @@ import {
 } from "@/app/types/revenue";
 import { pdf } from '@react-pdf/renderer';
 import { RevenuePDF } from "@/app/components/revenue/RevenuePDF";
+import { useSearch } from "@/app/context/SearchContext";
 
 export default function RevenuePage() {
   const { width, height } = useScreenSize();
   const responsive = getResponsiveValues(width, height);
+  const { searchQuery } = useSearch();
 
   // Round values to avoid hydration mismatch from floating point precision
   const cardPadding = Math.round(Math.max(12, Math.min(width * 0.015, 20)));
@@ -509,8 +511,12 @@ export default function RevenuePage() {
             </h3>
 
             <div className="space-y-4">
-              {staffRevenue.length > 0 ? (
-                staffRevenue.map((staff) => {
+              {staffRevenue
+                .filter(staff => staff.staffName.toLowerCase().includes(searchQuery.toLowerCase()))
+                .length > 0 ? (
+                staffRevenue
+                  .filter(staff => staff.staffName.toLowerCase().includes(searchQuery.toLowerCase()))
+                  .map((staff) => {
                   // Calculate average transaction on the frontend
                   const avgTransaction = staff.appointmentCount > 0
                     ? staff.totalRevenue / staff.appointmentCount

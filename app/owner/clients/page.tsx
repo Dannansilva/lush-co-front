@@ -5,6 +5,7 @@ import { useScreenSize, getResponsiveValues } from "@/app/hooks/useScreenSize";
 import { apiGet, apiPost, apiPut, apiDelete } from "@/app/utils/api";
 import UserProfile from "@/app/components/UserProfile";
 import { Appointment } from "@/app/utils/calendarUtils";
+import { useSearch } from "@/app/context/SearchContext";
 
 // Backend API response interface (matches your Postman API)
 interface ClientApi {
@@ -90,6 +91,7 @@ function Modal({ isOpen, onClose, title, children, cardPadding, spacing, respons
 export default function ClientsPage() {
   const { width, height } = useScreenSize();
   const responsive = getResponsiveValues(width, height);
+  const { searchQuery } = useSearch();
 
   const cardPadding = Math.max(12, Math.min(width * 0.015, 20));
   const spacing = Math.max(12, Math.min(width * 0.02, 16));
@@ -111,7 +113,6 @@ export default function ClientsPage() {
   const [viewingClient, setViewingClient] = useState<Client | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
 
   // Mock appointments for stats calculation (replace with actual API call)
   const [appointments] = useState<Appointment[]>([
@@ -346,11 +347,14 @@ export default function ClientsPage() {
   };
 
   // Filter clients by search query
-  const filteredClients = clients.filter(client =>
-    client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    client.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    client.phoneNumber.includes(searchQuery)
-  );
+  const filteredClients = clients.filter(client => {
+    const query = searchQuery.toLowerCase();
+    const nameMatch = client.name?.toLowerCase().includes(query) ?? false;
+    const emailMatch = client.email?.toLowerCase().includes(query) ?? false;
+    const phoneMatch = client.phoneNumber?.includes(searchQuery) ?? false;
+
+    return nameMatch || emailMatch || phoneMatch;
+  });
 
   // Calculate overview stats (using pagination total for total clients)
   const stats = {
@@ -419,7 +423,7 @@ export default function ClientsPage() {
           </div>
 
           {/* User Profile */}
-          <UserProfile showSearch={false} />
+          <UserProfile showSearch={true} />
         </div>
       )}
 
@@ -453,22 +457,8 @@ export default function ClientsPage() {
             </div>
           </div>
 
-          {/* Search and Add Button */}
-          <div className="flex items-center justify-between gap-3" style={{ marginBottom: `${spacing}px` }}>
-            <div className="relative flex-1 max-w-md">
-              <input
-                type="text"
-                placeholder="Search clients by name, email, or phone..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-lg text-white placeholder-zinc-500"
-                style={{ padding: `${spacing}px ${cardPadding}px`, fontSize: `${responsive.fontSize.body}px` }}
-              />
-              <svg className="w-5 h-5 text-zinc-500 absolute right-3 top-1/2 transform -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-
+          {/* Add Button */}
+          <div className="flex items-center justify-end" style={{ marginBottom: `${spacing}px` }}>
             <button
               onClick={handleAddClient}
               className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold rounded-lg transition-colors flex items-center justify-center gap-2 flex-shrink-0"
