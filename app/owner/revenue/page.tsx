@@ -261,7 +261,7 @@ export default function RevenuePage() {
               </button>
 
               {/* Filter Dropdown */}
-              <div className="relative filter-dropdown-container gap-2">
+              <div className="relative filter-dropdown-container ">
                 <button
                   onClick={() => setIsFilterOpen(!isFilterOpen)}
                   className={`rounded-lg transition-colors flex items-center gap-2 ${

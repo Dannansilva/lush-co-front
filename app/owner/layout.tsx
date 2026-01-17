@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -12,7 +12,7 @@ import UserProfile from "@/app/components/UserProfile";
 export default function OwnerLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const { width, height } = useScreenSize();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -29,7 +29,7 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
   const isMenuOpen = isDesktop ? !isSidebarCollapsed : isMobileMenuOpen;
   const sidebarWidth = isSidebarCollapsed ? 70 : 240;
 
-  const menuItems = [
+  const allMenuItems = [
     { name: "Dashboard", path: "/owner", icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" },
     { name: "Staff", path: "/owner/staff", icon: "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" },
     { name: "Services", path: "/owner/services", icon: "M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243zm0-5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z" },
@@ -37,6 +37,25 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
     { name: "Clients", path: "/owner/clients", icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" },
     { name: "Revenue", path: "/owner/revenue", icon: "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" }
   ];
+
+  // Filter menu items based on user role
+  const isRestrictedUser = user?.userType === 'RECEPTIONIST' || user?.userType === 'FRONT_DESK';
+  const menuItems = allMenuItems.filter(item => {
+    if (isRestrictedUser) {
+      return item.name !== 'Staff' && item.name !== 'Revenue';
+    }
+    return true;
+  });
+
+  // Redirect restricted users if they try to access restricted pages
+  useEffect(() => {
+    if (isRestrictedUser) {
+      const restrictedPaths = ['/owner/staff', '/owner/revenue'];
+      if (restrictedPaths.some(path => pathname.startsWith(path))) {
+        router.push('/owner');
+      }
+    }
+  }, [isRestrictedUser, pathname, router]);
 
   const handleLogout = () => {
     logout();
