@@ -19,6 +19,23 @@ interface ClientApi {
   __v?: number;
 }
 
+// Pagination response interface
+interface PaginationInfo {
+  currentPage: number;
+  totalPages: number;
+  totalCount: number;
+  limit: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+}
+
+interface PaginatedResponse {
+  success: boolean;
+  count: number;
+  pagination: PaginationInfo;
+  data: ClientApi[];
+}
+
 // Frontend display interface with computed stats
 interface Client extends ClientApi {
   lastVisit?: string;
@@ -82,6 +99,9 @@ export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState<PaginationInfo | null>(null);
+  const itemsPerPage = 10;
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -146,20 +166,32 @@ export default function ClientsPage() {
     };
   };
 
-  // Fetch clients from API on component mount
+  // Refresh trigger to force refetch
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Fetch clients from API with pagination
   useEffect(() => {
-    const fetchClients = async () => {
+    let isMounted = true;
+
+    const loadClients = async () => {
       setLoading(true);
       setError(null);
 
-      const response = await apiGet<ClientApi[]>('/customers');
+      const response = await apiGet<ClientApi[]>(`/customers?page=${currentPage}&limit=${itemsPerPage}`);
+
+      if (!isMounted) return;
 
       if (response.success && response.data) {
+        // The API returns pagination info at root level alongside data
+        const paginatedResponse = response as unknown as PaginatedResponse;
         // Calculate stats for each client
-        const clientsWithStats = response.data.map(client =>
+        const clientsWithStats = (response.data as ClientApi[]).map(client =>
           calculateClientStats(client, appointments)
         );
         setClients(clientsWithStats);
+        if (paginatedResponse.pagination) {
+          setPagination(paginatedResponse.pagination);
+        }
       } else {
         const errorMessage = 'message' in response && response.message
           ? response.message
@@ -170,8 +202,24 @@ export default function ClientsPage() {
       setLoading(false);
     };
 
-    fetchClients();
-  }, [appointments]);
+    loadClients();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentPage, appointments, refreshKey]);
+
+  // Function to trigger a refetch
+  const refreshClients = () => {
+    setRefreshKey(prev => prev + 1);
+  };
+
+  // Handle page change
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    // Scroll to top when changing pages
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   // Format relative time (e.g., "5 days ago")
   const formatRelativeTime = (dateString: string | undefined): string => {
@@ -216,10 +264,14 @@ export default function ClientsPage() {
     const response = await apiPost<ClientApi>('/customers', formData);
 
     if (response.success && response.data) {
-      const clientWithStats = calculateClientStats(response.data, appointments);
-      setClients([...clients, clientWithStats]);
       setIsAddModalOpen(false);
       setFormData({ name: "", phoneNumber: "", email: "", address: "", notes: "" });
+      // Refresh the list - go to first page to see the new client
+      if (currentPage === 1) {
+        refreshClients();
+      } else {
+        setCurrentPage(1);
+      }
     } else {
       const errorMessage = 'message' in response && response.message
         ? response.message
@@ -239,14 +291,11 @@ export default function ClientsPage() {
     const response = await apiPut(`/customers/${editingClient._id}`, formData);
 
     if (response.success) {
-      const updatedClient = { ...editingClient, ...formData };
-      const clientWithStats = calculateClientStats(updatedClient, appointments);
-      setClients(clients.map(client =>
-        client._id === editingClient._id ? clientWithStats : client
-      ));
       setIsEditModalOpen(false);
       setEditingClient(null);
       setFormData({ name: "", phoneNumber: "", email: "", address: "", notes: "" });
+      // Refresh the current page to show updated data
+      refreshClients();
     } else {
       const errorMessage = 'message' in response && response.message
         ? response.message
@@ -271,9 +320,15 @@ export default function ClientsPage() {
     const response = await apiDelete(`/customers/${deletingClient._id}`);
 
     if (response.success) {
-      setClients(clients.filter(client => client._id !== deletingClient._id));
       setIsDeleteModalOpen(false);
       setDeletingClient(null);
+      // If this was the last item on current page and not the first page, go to previous page
+      if (clients.length === 1 && currentPage > 1) {
+        setCurrentPage(currentPage - 1);
+      } else {
+        // Otherwise, refresh the current page
+        refreshClients();
+      }
     } else {
       const errorMessage = 'message' in response && response.message
         ? response.message
@@ -297,9 +352,9 @@ export default function ClientsPage() {
     client.phoneNumber.includes(searchQuery)
   );
 
-  // Calculate overview stats
+  // Calculate overview stats (using pagination total for total clients)
   const stats = {
-    total: clients.length,
+    total: pagination?.totalCount ?? clients.length,
     active: clients.filter(c => {
       if (!c.lastVisit) return false;
       const daysSinceVisit = (new Date().getTime() - new Date(c.lastVisit).getTime()) / (1000 * 60 * 60 * 24);
@@ -311,6 +366,43 @@ export default function ClientsPage() {
       return clientDate.getMonth() === now.getMonth() && clientDate.getFullYear() === now.getFullYear();
     }).length,
     totalRevenue: clients.reduce((sum, c) => sum + (c.totalRevenue || 0), 0)
+  };
+
+  // Generate page numbers for pagination
+  const getPageNumbers = () => {
+    if (!pagination) return [];
+    const { totalPages, currentPage } = pagination;
+    const pages: (number | string)[] = [];
+
+    if (totalPages <= 7) {
+      // Show all pages if 7 or less
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      // Show first page, last page, and pages around current
+      pages.push(1);
+
+      if (currentPage > 3) {
+        pages.push('...');
+      }
+
+      for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+        if (!pages.includes(i)) {
+          pages.push(i);
+        }
+      }
+
+      if (currentPage < totalPages - 2) {
+        pages.push('...');
+      }
+
+      if (!pages.includes(totalPages)) {
+        pages.push(totalPages);
+      }
+    }
+
+    return pages;
   };
 
   return (
@@ -545,6 +637,79 @@ export default function ClientsPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Pagination Controls */}
+          {!loading && !error && pagination && (
+            <div
+              className="flex items-center justify-between"
+              style={{ marginTop: `${spacing * 2}px`, paddingTop: `${spacing}px`, borderTop: '1px solid rgb(63 63 70)' }}
+            >
+              {/* Results info */}
+              <div className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.small}px` }}>
+                Showing {((pagination.currentPage - 1) * pagination.limit) + 1} - {Math.min(pagination.currentPage * pagination.limit, pagination.totalCount)} of {pagination.totalCount} clients
+              </div>
+
+              {/* Page navigation */}
+              <div className="flex items-center" style={{ gap: `${spacing / 2}px` }}>
+                {/* Previous button */}
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={!pagination.hasPrevPage}
+                  className="flex items-center justify-center bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+                  style={{ padding: `${spacing / 2}px ${spacing}px`, fontSize: `${responsive.fontSize.body}px` }}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                  {!isMobile && <span style={{ marginLeft: `${spacing / 2}px` }}>Previous</span>}
+                </button>
+
+                {/* Page numbers */}
+                {!isMobile && (
+                  <div className="flex items-center" style={{ gap: `${spacing / 4}px` }}>
+                    {getPageNumbers().map((page, index) => (
+                      typeof page === 'number' ? (
+                        <button
+                          key={index}
+                          onClick={() => handlePageChange(page)}
+                          className={`min-w-[40px] h-[40px] flex items-center justify-center rounded-lg transition-colors ${
+                            page === pagination.currentPage
+                              ? 'bg-yellow-400 text-black font-semibold'
+                              : 'bg-zinc-800 hover:bg-zinc-700 text-white'
+                          }`}
+                          style={{ fontSize: `${responsive.fontSize.body}px` }}
+                        >
+                          {page}
+                        </button>
+                      ) : (
+                        <span key={index} className="text-zinc-500 px-2">...</span>
+                      )
+                    ))}
+                  </div>
+                )}
+
+                {/* Mobile page indicator */}
+                {isMobile && (
+                  <div className="text-white font-medium" style={{ fontSize: `${responsive.fontSize.body}px` }}>
+                    {pagination.currentPage} / {pagination.totalPages}
+                  </div>
+                )}
+
+                {/* Next button */}
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={!pagination.hasNextPage}
+                  className="flex items-center justify-center bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+                  style={{ padding: `${spacing / 2}px ${spacing}px`, fontSize: `${responsive.fontSize.body}px` }}
+                >
+                  {!isMobile && <span style={{ marginRight: `${spacing / 2}px` }}>Next</span>}
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
             </div>
           )}
         </div>

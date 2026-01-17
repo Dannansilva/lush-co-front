@@ -5,14 +5,29 @@ import { useScreenSize, getResponsiveValues } from '@/app/hooks/useScreenSize';
 import { Appointment } from '@/app/utils/calendarUtils';
 import ShareBillModal from '../appointment/ShareBillModal';
 
+interface PaginationInfo {
+  currentPage: number;
+  totalPages: number;
+  totalCount: number;
+  limit: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+}
+
 interface AllAppointmentsViewProps {
   appointments: Appointment[];
   onAppointmentClick: (appointment: Appointment) => void;
+  pagination?: PaginationInfo | null;
+  onPageChange?: (page: number) => void;
+  currentPage?: number;
 }
 
 export default function AllAppointmentsView({
   appointments,
   onAppointmentClick,
+  pagination,
+  onPageChange,
+  currentPage = 1,
 }: AllAppointmentsViewProps) {
   const { width, height } = useScreenSize();
   const responsive = getResponsiveValues(width, height);
@@ -60,6 +75,42 @@ export default function AllAppointmentsView({
 
     return filtered;
   }, [appointments, filterStatus, filterDateFrom, filterDateTo, sortBy]);
+
+  // Generate page numbers for pagination
+  const getPageNumbers = () => {
+    if (!pagination) return [];
+    const { totalPages } = pagination;
+    const pages: (number | string)[] = [];
+
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      pages.push(1);
+      if (currentPage > 3) {
+        pages.push('...');
+      }
+      for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+        if (!pages.includes(i)) {
+          pages.push(i);
+        }
+      }
+      if (currentPage < totalPages - 2) {
+        pages.push('...');
+      }
+      if (!pages.includes(totalPages)) {
+        pages.push(totalPages);
+      }
+    }
+    return pages;
+  };
+
+  const handlePageClick = (page: number) => {
+    if (onPageChange) {
+      onPageChange(page);
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -200,7 +251,7 @@ export default function AllAppointmentsView({
 
       {/* Results Count */}
       <div
-        className="text-zinc-400 mb-2"
+        className="text-zinc-400 mb-2 flex-shrink-0"
         style={{
           fontSize: `${responsive.fontSize.body}px`,
           padding: `0 ${cardPadding / 2}px`,
@@ -210,7 +261,7 @@ export default function AllAppointmentsView({
       </div>
 
       {/* Appointments List */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto min-h-0">
         {filteredAppointments.length === 0 ? (
           <div
             className="flex flex-col items-center justify-center bg-zinc-900 rounded-lg border border-zinc-800"
@@ -367,7 +418,7 @@ export default function AllAppointmentsView({
                   <div className="flex items-center justify-between mt-2 pt-2 border-t border-zinc-800">
                     <span className="text-zinc-400">Price:</span>
                     <span className="font-semibold text-yellow-400">
-                      ${appointment.price}
+                      LKR {appointment.price.toLocaleString()}
                     </span>
                   </div>
                 </div>
@@ -390,29 +441,100 @@ export default function AllAppointmentsView({
                     View
                   </button>
 
-                  {/* Share Bill Button - Only for completed appointments */}
-                  {appointment.status === 'completed' && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedBillAppointment(appointment);
-                        setShareBillModalOpen(true);
-                      }}
-                      className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
-                      style={{ padding: `${spacing / 2}px ${cardPadding}px`, fontSize: `${responsive.fontSize.small}px` }}
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      Share Bill
-                    </button>
-                  )}
+                  {/* Share Bill Button - Available for all appointments */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedBillAppointment(appointment);
+                      setShareBillModalOpen(true);
+                    }}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+                    style={{ padding: `${spacing / 2}px ${cardPadding}px`, fontSize: `${responsive.fontSize.small}px` }}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Share Bill
+                  </button>
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {/* Pagination Controls */}
+      {pagination && (
+        <div
+          className="flex items-center justify-between flex-shrink-0"
+          style={{ marginTop: `${spacing * 2}px`, paddingTop: `${spacing}px`, borderTop: '1px solid rgb(63 63 70)' }}
+        >
+          {/* Results info */}
+          <div className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.small}px` }}>
+            Showing {((pagination.currentPage - 1) * pagination.limit) + 1} - {Math.min(pagination.currentPage * pagination.limit, pagination.totalCount)} of {pagination.totalCount} appointments
+          </div>
+
+          {/* Page navigation */}
+          <div className="flex items-center" style={{ gap: `${spacing / 2}px` }}>
+            {/* Previous button */}
+            <button
+              onClick={() => handlePageClick(currentPage - 1)}
+              disabled={!pagination.hasPrevPage}
+              className="flex items-center justify-center bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+              style={{ padding: `${spacing / 2}px ${spacing}px`, fontSize: `${responsive.fontSize.body}px` }}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              {!isMobile && <span style={{ marginLeft: `${spacing / 2}px` }}>Previous</span>}
+            </button>
+
+            {/* Page numbers */}
+            {!isMobile && (
+              <div className="flex items-center" style={{ gap: `${spacing / 4}px` }}>
+                {getPageNumbers().map((page, index) => (
+                  typeof page === 'number' ? (
+                    <button
+                      key={index}
+                      onClick={() => handlePageClick(page)}
+                      className={`min-w-[40px] h-[40px] flex items-center justify-center rounded-lg transition-colors ${
+                        page === pagination.currentPage
+                          ? 'bg-yellow-400 text-black font-semibold'
+                          : 'bg-zinc-800 hover:bg-zinc-700 text-white'
+                      }`}
+                      style={{ fontSize: `${responsive.fontSize.body}px` }}
+                    >
+                      {page}
+                    </button>
+                  ) : (
+                    <span key={index} className="text-zinc-500 px-2">...</span>
+                  )
+                ))}
+              </div>
+            )}
+
+            {/* Mobile page indicator */}
+            {isMobile && (
+              <div className="text-white font-medium" style={{ fontSize: `${responsive.fontSize.body}px` }}>
+                {pagination.currentPage} / {pagination.totalPages}
+              </div>
+            )}
+
+            {/* Next button */}
+            <button
+              onClick={() => handlePageClick(currentPage + 1)}
+              disabled={!pagination.hasNextPage}
+              className="flex items-center justify-center bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+              style={{ padding: `${spacing / 2}px ${spacing}px`, fontSize: `${responsive.fontSize.body}px` }}
+            >
+              {!isMobile && <span style={{ marginRight: `${spacing / 2}px` }}>Next</span>}
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Share Bill Modal */}
       {selectedBillAppointment && (

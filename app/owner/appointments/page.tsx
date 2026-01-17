@@ -40,6 +40,23 @@ interface BackendAppointment {
   notes?: string;
 }
 
+// Pagination interfaces
+interface PaginationInfo {
+  currentPage: number;
+  totalPages: number;
+  totalCount: number;
+  limit: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+}
+
+interface PaginatedAppointmentsResponse {
+  success: boolean;
+  count: number;
+  pagination: PaginationInfo;
+  data: BackendAppointment[];
+}
+
 export default function AppointmentsPage() {
   const { width, height } = useScreenSize();
   const responsive = getResponsiveValues(width, height);
@@ -60,6 +77,12 @@ export default function AppointmentsPage() {
   // Appointments state
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loadingAppointments, setLoadingAppointments] = useState(true);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState<PaginationInfo | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const itemsPerPage = 10;
 
   // Panel state
   const [isPanelOpen, setIsPanelOpen] = useState(false);
@@ -84,64 +107,83 @@ export default function AppointmentsPage() {
     fetchStaff();
   }, []);
 
-  // Fetch appointments from API
-  const fetchAppointments = async () => {
-    setLoadingAppointments(true);
-    const response = await apiGet<BackendAppointment[]>('/appointments');
+  // Transform backend appointment to frontend format
+  const transformAppointment = (apt: BackendAppointment): Appointment => {
+    const appointmentDate = new Date(apt.appointmentDate);
 
-    if (response.success && response.data) {
-      // Transform backend appointments to frontend format
-      const transformedAppointments: Appointment[] = response.data.map((apt) => {
-        const appointmentDate = new Date(apt.appointmentDate);
+    // Extract date in YYYY-MM-DD format
+    const dateStr = appointmentDate.toISOString().split('T')[0];
 
-        // Extract date in YYYY-MM-DD format
-        const dateStr = appointmentDate.toISOString().split('T')[0];
+    // Extract time in 12-hour format
+    const hours = appointmentDate.getHours();
+    const minutes = appointmentDate.getMinutes();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 || 12;
+    const timeStr = `${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`;
 
-        // Extract time in 12-hour format
-        const hours = appointmentDate.getHours();
-        const minutes = appointmentDate.getMinutes();
-        const ampm = hours >= 12 ? 'PM' : 'AM';
-        const displayHours = hours % 12 || 12;
-        const timeStr = `${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+    // Get service info (first service for now)
+    const serviceName = apt.services?.[0]?.name || 'Service';
+    const serviceDuration = apt.services?.[0]?.duration || 60;
+    const servicePrice = apt.services?.[0]?.price || 0;
 
-        // Get service info (first service for now)
-        const serviceName = apt.services?.[0]?.name || 'Service';
-        const serviceDuration = apt.services?.[0]?.duration || 60;
-        const servicePrice = apt.services?.[0]?.price || 0;
+    // Map backend status to frontend status type
+    const statusLower = apt.status?.toLowerCase() || 'pending';
+    const validStatuses = ['confirmed', 'pending', 'cancelled', 'in_progress', 'completed'];
+    const status: 'confirmed' | 'pending' | 'cancelled' | 'in_progress' | 'completed' =
+      validStatuses.includes(statusLower)
+        ? (statusLower as 'confirmed' | 'pending' | 'cancelled' | 'in_progress' | 'completed')
+        : 'pending';
 
-        // Map backend status to frontend status type
-        const statusLower = apt.status?.toLowerCase() || 'pending';
-        const validStatuses = ['confirmed', 'pending', 'cancelled', 'in_progress', 'completed'];
-        const status: 'confirmed' | 'pending' | 'cancelled' | 'in_progress' | 'completed' =
-          validStatuses.includes(statusLower)
-            ? (statusLower as 'confirmed' | 'pending' | 'cancelled' | 'in_progress' | 'completed')
-            : 'pending';
-
-        return {
-          id: Date.now() + Math.random(), // Temporary numeric ID
-          _id: apt._id, // MongoDB ID for editing
-          clientName: apt.customer?.name || 'Unknown Client',
-          phone: apt.customer?.phoneNumber || '',
-          staffName: apt.staff?.name || 'Unknown Staff',
-          service: serviceName,
-          date: dateStr,
-          time: timeStr,
-          duration: serviceDuration,
-          price: servicePrice,
-          status,
-          notes: apt.notes,
-        };
-      });
-
-      setAppointments(transformedAppointments);
-    }
-    setLoadingAppointments(false);
+    return {
+      id: Date.now() + Math.random(), // Temporary numeric ID
+      _id: apt._id, // MongoDB ID for editing
+      clientName: apt.customer?.name || 'Unknown Client',
+      phone: apt.customer?.phoneNumber || '',
+      staffName: apt.staff?.name || 'Unknown Staff',
+      service: serviceName,
+      date: dateStr,
+      time: timeStr,
+      duration: serviceDuration,
+      price: servicePrice,
+      status,
+      notes: apt.notes,
+    };
   };
 
+  // Fetch appointments from API with pagination
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchAppointments();
-  }, []);
+    let isMounted = true;
+
+    const loadAppointments = async () => {
+      setLoadingAppointments(true);
+      const response = await apiGet<BackendAppointment[]>(`/appointments?page=${currentPage}&limit=${itemsPerPage}`);
+
+      if (!isMounted) return;
+
+      if (response.success && response.data) {
+        // The API returns pagination info at root level alongside data
+        const paginatedResponse = response as unknown as PaginatedAppointmentsResponse;
+        // Transform backend appointments to frontend format
+        const transformedAppointments: Appointment[] = (response.data as BackendAppointment[]).map(transformAppointment);
+        setAppointments(transformedAppointments);
+        if (paginatedResponse.pagination) {
+          setPagination(paginatedResponse.pagination);
+        }
+      }
+      setLoadingAppointments(false);
+    };
+
+    loadAppointments();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentPage, refreshKey]);
+
+  // Function to trigger a refetch
+  const refreshAppointments = () => {
+    setRefreshKey(prev => prev + 1);
+  };
 
   // Handlers
   const handleStaffCellClick = (
@@ -171,7 +213,7 @@ export default function AppointmentsPage() {
 
   const handleSaveAppointment = () => {
     // Refetch appointments from backend to get latest data
-    fetchAppointments();
+    refreshAppointments();
     setIsPanelOpen(false);
   };
 
@@ -206,8 +248,14 @@ export default function AppointmentsPage() {
     setSelectedDate(newDate);
   };
 
+  // Handle page change
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const stats = {
-    total: appointments.length,
+    total: pagination?.totalCount ?? appointments.length,
     confirmed: appointments.filter(a => a.status === "confirmed").length,
     pending: appointments.filter(a => a.status === "pending").length,
     cancelled: appointments.filter(a => a.status === "cancelled").length
@@ -335,6 +383,9 @@ export default function AppointmentsPage() {
               <AllAppointmentsView
                 appointments={appointments}
                 onAppointmentClick={handleAppointmentClick}
+                pagination={pagination}
+                onPageChange={handlePageChange}
+                currentPage={currentPage}
               />
             ) : staff.length === 0 ? (
               <div className="text-center bg-zinc-900 rounded-lg border border-zinc-800" style={{ padding: `${spacing * 3}px` }}>
