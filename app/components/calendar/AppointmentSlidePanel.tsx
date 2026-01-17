@@ -5,6 +5,7 @@ import { useScreenSize, getResponsiveValues } from '@/app/hooks/useScreenSize';
 import { Appointment, formatDateToString } from '@/app/utils/calendarUtils';
 import { apiGet, apiPost, apiPut } from '@/app/utils/api';
 import Input from '../Input';
+import SearchableSelect from '../SearchableSelect';
 
 interface Client {
   _id: string;
@@ -36,6 +37,22 @@ interface AppointmentResponse {
   appointmentDate: string;
   status: string;
   notes?: string;
+}
+
+interface PaginationInfo {
+  currentPage: number;
+  totalPages: number;
+  totalCount: number;
+  limit: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+}
+
+interface PaginatedClientResponse {
+  success: boolean;
+  count: number;
+  pagination: PaginationInfo;
+  data: Client[];
 }
 
 interface AppointmentSlidePanelProps {
@@ -78,23 +95,63 @@ export default function AppointmentSlidePanel({
     const fetchData = async () => {
       setLoadingClients(true);
 
-      const [clientsRes, staffRes, servicesRes] = await Promise.all([
-        apiGet<Client[]>('/customers'),
-        apiGet<Staff[]>('/staff'),
-        apiGet<Service[]>('/services')
-      ]);
+      setLoadingClients(true);
 
-      if (clientsRes.success && clientsRes.data) {
-        setClients(clientsRes.data);
-      }
-      if (staffRes.success && staffRes.data) {
-        setStaff(staffRes.data);
-      }
-      if (servicesRes.success && servicesRes.data) {
-        setServices(servicesRes.data);
-      }
+      try {
+        // Fetch staff and services first
+        const [staffRes, servicesRes] = await Promise.all([
+          apiGet<Staff[]>('/staff'),
+          apiGet<Service[]>('/services')
+        ]);
 
-      setLoadingClients(false);
+        if (staffRes.success && staffRes.data) {
+          setStaff(staffRes.data);
+        }
+        if (servicesRes.success && servicesRes.data) {
+          setServices(servicesRes.data);
+        }
+
+        // Fetch clients with pagination handling
+        let allClients: Client[] = [];
+        let currentPage = 1;
+        const limit = 100; // Use a reasonable limit
+        
+        // Initial fetch
+        const initialRes = await apiGet<Client[]>(`/customers?page=${currentPage}&limit=${limit}`);
+        
+        if (initialRes.success && initialRes.data) {
+          allClients = [...initialRes.data];
+          
+          // Check if we need to fetch more pages
+          // Cast to unknown first then to custom interface because apiGet returns generic ApiResponse
+          const paginatedRes = initialRes as unknown as PaginatedClientResponse;
+          
+          if (paginatedRes.pagination && paginatedRes.pagination.totalPages > 1) {
+            const totalPages = paginatedRes.pagination.totalPages;
+            const promises = [];
+            
+            for (let page = 2; page <= totalPages; page++) {
+              promises.push(apiGet<Client[]>(`/customers?page=${page}&limit=${limit}`));
+            }
+            
+            const results = await Promise.all(promises);
+            results.forEach(res => {
+              if (res.success && res.data) {
+                allClients = [...allClients, ...res.data];
+              }
+            });
+          }
+        }
+        
+        // Remove duplicates just in case
+        const uniqueClients = Array.from(new Map(allClients.map(c => [c._id, c])).values());
+        setClients(uniqueClients);
+
+      } catch (err) {
+        console.error("Error fetching data:", err);
+      } finally {
+        setLoadingClients(false);
+      }
     };
     fetchData();
   }, []);
@@ -422,29 +479,21 @@ export default function AppointmentSlidePanel({
         {/* Form */}
         <form onSubmit={handleSubmit} className="flex flex-col" style={{ gap: `${spacing}px` }}>
           <div className="flex flex-col gap-2">
-            <label className="text-zinc-300 text-sm font-medium">
-              Client <span className="text-red-400 ml-1">*</span>
-            </label>
-            <select
-              value={selectedClientId}
-              onChange={(e) => handleClientSelect(e.target.value)}
-              required
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg py-[0.875rem] px-[1rem] text-white text-[clamp(0.875rem,1.5vw,1rem)] focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 transition-all cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20stroke%3D%22%23a1a1aa%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%222%22%20d%3D%22m19%209-7%207-7-7%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.5rem] bg-[right_0.5rem_center] bg-no-repeat pr-10"
-              style={{
-                colorScheme: 'dark'
-              }}
-            >
-              <option value="" className="bg-zinc-900 text-zinc-400">Select client</option>
-              {loadingClients ? (
-                <option disabled className="bg-zinc-900 text-zinc-500">Loading clients...</option>
-              ) : (
-                clients.map((client) => (
-                  <option key={client._id} value={client._id} className="bg-zinc-900 text-white py-2">
-                    {client.name}
-                  </option>
-                ))
-              )}
-            </select>
+            <div className="relative">
+              <SearchableSelect
+                label="Client"
+                required={true}
+                placeholder="Select client"
+                options={clients.map(c => ({
+                  value: c._id,
+                  label: c.name,
+                  subtext: c.phoneNumber
+                }))}
+                value={selectedClientId}
+                onChange={handleClientSelect}
+                disabled={loadingClients}
+              />
+            </div>
           </div>
 
           <div className="flex flex-col gap-2">
