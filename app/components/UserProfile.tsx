@@ -5,6 +5,8 @@ import { useAuth } from "@/app/context/AuthContext";
 import { useScreenSize, getResponsiveValues } from "@/app/hooks/useScreenSize";
 import { getUserInitials, formatUserType } from "@/app/utils/userUtils";
 
+import { useSearch } from "@/app/context/SearchContext";
+
 interface UserProfileProps {
   showSearch?: boolean;
 }
@@ -13,6 +15,7 @@ export default function UserProfile({ showSearch = true }: UserProfileProps) {
   const { user } = useAuth();
   const { width, height } = useScreenSize();
   const responsive = getResponsiveValues(width, height);
+  const { searchQuery, setSearchQuery } = useSearch();
 
   const cardPadding = Math.max(12, Math.min(width * 0.015, 20));
   const spacing = Math.max(12, Math.min(width * 0.02, 16));
@@ -24,11 +27,13 @@ export default function UserProfile({ showSearch = true }: UserProfileProps) {
         <input
           type="text"
           placeholder="Search..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
           className="bg-zinc-900 border border-zinc-800 rounded-lg text-white placeholder-zinc-500"
           style={{
             padding: `${spacing / 2}px ${cardPadding}px`,
             fontSize: `${responsive.fontSize.body}px`,
-            width: "200px",
+            width: isMobile ? "130px" : "200px",
           }}
         />
       )}

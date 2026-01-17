@@ -6,17 +6,24 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useScreenSize, getResponsiveValues } from "@/app/hooks/useScreenSize";
 import { useAuth } from "@/app/context/AuthContext";
+import { SearchProvider, useSearch } from "@/app/context/SearchContext";
 import ProtectedRoute from "@/app/components/ProtectedRoute";
 import UserProfile from "@/app/components/UserProfile";
 
-export default function OwnerLayout({ children }: { children: React.ReactNode }) {
+function OwnerLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
   const { width, height } = useScreenSize();
+  const { setSearchQuery } = useSearch();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+  // Reset search query on path change
+  useEffect(() => {
+    setSearchQuery("");
+  }, [pathname, setSearchQuery]);
 
   // Get responsive values based on screen size
   const responsive = getResponsiveValues(width, height);
@@ -63,8 +70,7 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
   };
 
   return (
-    <ProtectedRoute>
-      <div className="h-screen bg-black text-white overflow-hidden flex flex-col">
+    <div className="h-screen bg-black text-white overflow-hidden flex flex-col">
       {/* Mobile overlay */}
       {isMenuOpen && !isDesktop && (
         <div
@@ -197,14 +203,23 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
                   )?.name || "Dashboard"}
                 </div>
               </div>
-              <UserProfile showSearch={false} />
+              <UserProfile showSearch={pathname !== "/owner"} />
             </div>
           )}
 
           {children}
         </div>
       </div>
-      </div>
+    </div>
+  );
+}
+
+export default function OwnerLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <ProtectedRoute>
+      <SearchProvider>
+        <OwnerLayoutContent>{children}</OwnerLayoutContent>
+      </SearchProvider>
     </ProtectedRoute>
   );
 }

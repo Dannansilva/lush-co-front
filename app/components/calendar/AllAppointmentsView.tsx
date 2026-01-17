@@ -20,6 +20,7 @@ interface AllAppointmentsViewProps {
   pagination?: PaginationInfo | null;
   onPageChange?: (page: number) => void;
   currentPage?: number;
+  searchQuery?: string;
 }
 
 export default function AllAppointmentsView({
@@ -28,6 +29,7 @@ export default function AllAppointmentsView({
   pagination,
   onPageChange,
   currentPage = 1,
+  searchQuery = "",
 }: AllAppointmentsViewProps) {
   const { width, height } = useScreenSize();
   const responsive = getResponsiveValues(width, height);
@@ -48,6 +50,16 @@ export default function AllAppointmentsView({
   // Filter and sort appointments
   const filteredAppointments = useMemo(() => {
     let filtered = [...appointments];
+
+    // Filter by search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(apt => 
+        apt.clientName.toLowerCase().includes(query) || 
+        apt.staffName.toLowerCase().includes(query) ||
+        apt.service.toLowerCase().includes(query)
+      );
+    }
 
     // Filter by status
     if (filterStatus !== 'all') {
@@ -74,7 +86,7 @@ export default function AllAppointmentsView({
     }
 
     return filtered;
-  }, [appointments, filterStatus, filterDateFrom, filterDateTo, sortBy]);
+  }, [appointments, filterStatus, filterDateFrom, filterDateTo, sortBy, searchQuery]);
 
   // Generate page numbers for pagination
   const getPageNumbers = () => {

@@ -11,6 +11,7 @@ import AppointmentSlidePanel from "@/app/components/calendar/AppointmentSlidePan
 import AllAppointmentsView from "@/app/components/calendar/AllAppointmentsView";
 import UserProfile from "@/app/components/UserProfile";
 import { apiGet } from "@/app/utils/api";
+import { useSearch } from "@/app/context/SearchContext";
 
 interface StaffMember {
   _id: string;
@@ -60,6 +61,7 @@ interface PaginatedAppointmentsResponse {
 export default function AppointmentsPage() {
   const { width, height } = useScreenSize();
   const responsive = getResponsiveValues(width, height);
+  const { searchQuery } = useSearch();
 
   const cardPadding = Math.max(12, Math.min(width * 0.015, 20));
   const spacing = Math.max(12, Math.min(width * 0.02, 16));
@@ -69,6 +71,13 @@ export default function AppointmentsPage() {
   // View state
   const [showAllAppointments, setShowAllAppointments] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
+
+  // Automatically switch to list view when searching
+  useEffect(() => {
+    if (searchQuery) {
+      setShowAllAppointments(true);
+    }
+  }, [searchQuery]);
 
   // Staff state
   const [staff, setStaff] = useState<StaffMember[]>([]);
@@ -275,7 +284,7 @@ export default function AppointmentsPage() {
           </div>
 
           {/* User Profile */}
-          <UserProfile showSearch={false} />
+          <UserProfile showSearch={true} />
         </div>
       )}
 
@@ -386,6 +395,7 @@ export default function AppointmentsPage() {
                 pagination={pagination}
                 onPageChange={handlePageChange}
                 currentPage={currentPage}
+                searchQuery={searchQuery}
               />
             ) : staff.length === 0 ? (
               <div className="text-center bg-zinc-900 rounded-lg border border-zinc-800" style={{ padding: `${spacing * 3}px` }}>
