@@ -6,7 +6,7 @@ import { Appointment } from '@/app/utils/calendarUtils';
 
 interface AppointmentCardProps {
   appointment: Appointment;
-  position: { top: number; height: number };
+  position: { top: number; height: number; left?: string; width?: string };
   onClick: (e: React.MouseEvent) => void;
 }
 
@@ -62,15 +62,17 @@ export default function AppointmentCard({
   return (
     <div
       className={`
-        absolute left-1 right-1 rounded-lg border-l-4 overflow-hidden
+        rounded-lg border-l-4 overflow-hidden
         cursor-pointer transition-all hover:shadow-lg z-20
         ${style.bg} ${style.border} ${style.text}
       `}
       style={{
         top: `${position.top}px`,
         height: `${minHeight}px`,
+        left: position.left || '4px',
+        width: position.width || (isMobile ? 'calc(100% - 8px)' : 'calc(100% - 8px)'),
         padding: isMobile ? '6px 8px' : '8px 12px',
-        position: 'relative',
+        position: 'absolute',
       }}
       onClick={onClick}
     >

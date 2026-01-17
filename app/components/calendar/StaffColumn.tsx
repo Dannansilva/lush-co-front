@@ -6,6 +6,7 @@ import {
   isAppointmentOnDate,
   calculateAppointmentPosition,
   formatTimeToString,
+  CALENDAR_START_HOUR,
 } from '@/app/utils/calendarUtils';
 import AppointmentCard from './AppointmentCard';
 
@@ -35,8 +36,70 @@ export default function StaffColumn({
     (apt) => apt.staffName === staffName && isAppointmentOnDate(apt, date)
   );
 
-  // Calculate quarter heights (15-minute slots)
   const quarterHeight = cellHeight / 4;
+  
+  // Group overlapping appointments
+  const positionedAppointments = React.useMemo(() => {
+    // 1. Convert time to minutes from start of day (9:00 AM)
+    const getMinutes = (timeStr: string) => {
+      const [time, period] = timeStr.split(' ');
+      const [hStr, mStr] = time.split(':');
+      let h = parseInt(hStr);
+      if (period === 'PM' && h !== 12) h += 12;
+      if (period === 'AM' && h === 12) h = 0;
+      return h * 60 + parseInt(mStr);
+    };
+
+    // 2. Sort by start time
+    const sorted = [...staffAppointments].sort((a, b) => {
+      const startA = getMinutes(a.time);
+      const startB = getMinutes(b.time);
+      if (startA !== startB) return startA - startB;
+      return b.duration - a.duration; // Longest first if same start
+    });
+
+    // 3. Group overlapping
+    const groups: Appointment[][] = [];
+    if (sorted.length > 0) {
+      let currentGroup: Appointment[] = [sorted[0]];
+      let groupEndTime = getMinutes(sorted[0].time) + sorted[0].duration;
+
+      for (let i = 1; i < sorted.length; i++) {
+        const apt = sorted[i];
+        const start = getMinutes(apt.time);
+        const end = start + apt.duration;
+
+        if (start < groupEndTime) {
+          currentGroup.push(apt);
+          groupEndTime = Math.max(groupEndTime, end);
+        } else {
+          groups.push(currentGroup);
+          currentGroup = [apt];
+          groupEndTime = end;
+        }
+      }
+      groups.push(currentGroup);
+    }
+
+    // 4. Assign positions
+    const result: { appointment: Appointment; left: string; width: string }[] = [];
+    
+    groups.forEach(group => {
+      const count = group.length;
+      group.forEach((apt, index) => {
+        // If it's a single appointment, limit width to 85% to leave room for clicking "add new"
+        const width = count === 1 ? '85%' : `calc(${100 / count}% - 4px)`;
+        
+        result.push({
+          appointment: apt,
+          width,
+          left: `calc(${(index / count) * 100}% + 2px)`
+        });
+      });
+    });
+
+    return result;
+  }, [staffAppointments]);
 
   const handleQuarterClick = (e: React.MouseEvent, minutes: number) => {
     e.stopPropagation();
@@ -66,19 +129,27 @@ export default function StaffColumn({
       </div>
 
       {/* Only render appointments in the first hour cell to avoid duplicates */}
-      {hour === 9 &&
-        staffAppointments.map((appointment) => {
+      {/* Only render appointments in the first hour cell to avoid duplicates */}
+      {hour === CALENDAR_START_HOUR &&
+        positionedAppointments.map(({ appointment, left, width }) => {
           const position = calculateAppointmentPosition(
             appointment.time,
             appointment.duration,
             cellHeight
           );
 
+          // Add layout overrides
+          const layoutPosition = {
+            ...position,
+            left,
+            width
+          };
+
           return (
             <AppointmentCard
               key={appointment.id}
               appointment={appointment}
-              position={position}
+              position={layoutPosition}
               onClick={(e) => {
                 e.stopPropagation(); // Prevent cell click
                 onAppointmentClick(appointment);
