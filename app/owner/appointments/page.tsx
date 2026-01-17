@@ -39,6 +39,7 @@ interface BackendAppointment {
   appointmentDate: string;
   status: string;
   notes?: string;
+  price?: number;
 }
 
 // Pagination interfaces
@@ -130,10 +131,10 @@ export default function AppointmentsPage() {
     const displayHours = hours % 12 || 12;
     const timeStr = `${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`;
 
-    // Get service info (first service for now)
     const serviceName = apt.services?.[0]?.name || 'Service';
     const serviceDuration = apt.services?.[0]?.duration || 60;
-    const servicePrice = apt.services?.[0]?.price || 0;
+    // Use custom price if available, otherwise fallback to service price
+    const servicePrice = apt.price !== undefined ? apt.price : (apt.services?.[0]?.price || 0);
 
     // Map backend status to frontend status type
     const statusLower = apt.status?.toLowerCase() || 'pending';
