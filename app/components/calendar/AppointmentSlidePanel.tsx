@@ -417,23 +417,47 @@ export default function AppointmentSlidePanel({
   const handleWhatsAppShare = () => {
     if (!formData.phone) return;
     
-    // Clean phone number (remove non-digits, ensure country code if needed)
-    // Assuming local numbers, but good to handle international if possible.
-    // For now, strip non-digits.
+    // Clean phone number (remove non-digits)
     const cleanPhone = formData.phone.replace(/\D/g, '');
     
-    const message = `Hello ${formData.clientName},
+    // Add country code if not present (assuming Sri Lanka +94)
+    let whatsappNumber = cleanPhone;
+    if (!cleanPhone.startsWith('94') && cleanPhone.length === 10) {
+      whatsappNumber = '94' + cleanPhone.substring(1); // Remove leading 0 and add country code
+    }
     
-Your appointment at Lush & Co is confirmed!
-📅 Date: ${formData.date}
-⏰ Time: ${formData.time}
-✂️ Service: ${formData.service}
-💰 Price: LKR ${formData.price}
+    // Format Date nicely
+    const dateObj = new Date(formData.date);
+    const formattedDate = dateObj.toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
 
-See you soon!`;
+    const message = `
+📅 *Appointment Confirmation - Lush & Co*
+
+Hello ${formData.clientName},
+
+Your appointment is confirmed!
+
+📋 Details:
+• Date: ${formattedDate}
+• Time: ${formData.time}
+• Service: ${formData.service}
+• Duration: ${formData.duration} minutes
+• Staff: ${formData.staffName}
+
+💰 Price: LKR ${parseFloat(formData.price).toLocaleString()}
+
+📍 Location: Lush & Co Salon
+
+See you soon! ✨
+`.trim();
 
     const encodedMessage = encodeURIComponent(message);
-    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
+    const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
     
     window.open(whatsappUrl, '_blank');
   };
