@@ -363,6 +363,7 @@ export default function AppointmentSlidePanel({
         appointmentDate: appointmentDateTime,
         status: formData.status.toUpperCase(),
         notes: notes || undefined,
+        price: parseFloat(formData.price),
       };
 
       // Check if we're editing an existing appointment or creating a new one
@@ -592,14 +593,14 @@ export default function AppointmentSlidePanel({
             </div>
           </div>
 
-          <div className="flex flex-col gap-2">
-            <label className="text-zinc-300 text-sm font-medium">
-              Price (LKR) <span className="text-red-400 ml-1">*</span>
-            </label>
-            <div className="w-full bg-zinc-900/50 border border-zinc-700/50 rounded-lg py-[0.875rem] px-[1rem] text-zinc-400 text-[clamp(0.875rem,1.5vw,1rem)]">
-              {formData.price ? `LKR ${formData.price}` : 'Select a service to see price'}
-            </div>
-          </div>
+          <Input
+            label="Price (LKR)"
+            type="number"
+            value={formData.price}
+            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+            required
+            placeholder="Select a service to see price"
+          />
 
           <div className="flex flex-col gap-2">
             <label className="text-zinc-300 text-sm font-medium">
