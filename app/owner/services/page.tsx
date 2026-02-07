@@ -153,6 +153,7 @@ export default function ServicesPage() {
     name: "",
     description: "",
     price: "",
+    duration: "",
     selectedServiceIds: [] as string[],
   });
 
@@ -289,6 +290,7 @@ export default function ServicesPage() {
       name: "",
       description: "",
       price: "",
+      duration: "",
       selectedServiceIds: [],
     });
     setPackageServiceSearch("");
@@ -301,6 +303,7 @@ export default function ServicesPage() {
       name: pkg.name,
       description: pkg.description,
       price: pkg.price.toString(),
+      duration: pkg.services.reduce((acc, s) => acc + s.duration, 0).toString(),
       selectedServiceIds: pkg.services.map((s) => s._id),
     });
     setPackageServiceSearch("");
@@ -314,22 +317,35 @@ export default function ServicesPage() {
     setOpenMenuId(null);
   };
 
+  // Helper to calculate duration from selected services
+  const calculateDuration = (serviceIds: string[]) => {
+    const selected = allServices.filter((s) => serviceIds.includes(s._id));
+    return selected.reduce((acc, curr) => acc + curr.duration, 0).toString();
+  };
+
   const toggleServiceSelection = (serviceId: string) => {
     setPackageFormData((prev) => {
       const isSelected = prev.selectedServiceIds.includes(serviceId);
+      let newSelectedIds;
       if (isSelected) {
-        return {
-          ...prev,
-          selectedServiceIds: prev.selectedServiceIds.filter(
-            (id) => id !== serviceId,
-          ),
-        };
+        newSelectedIds = prev.selectedServiceIds.filter(
+          (id) => id !== serviceId,
+        );
       } else {
-        return {
-          ...prev,
-          selectedServiceIds: [...prev.selectedServiceIds, serviceId],
-        };
+        newSelectedIds = [...prev.selectedServiceIds, serviceId];
       }
+
+      // Auto-update duration if it hasn't been manually edited?
+      // For simplicity, let's just update the duration based on selection sum
+      // The user can override it afterwards if we make the input controlled.
+      // Actually, better UX: calculate new duration and set it.
+      const newDuration = calculateDuration(newSelectedIds);
+
+      return {
+        ...prev,
+        selectedServiceIds: newSelectedIds,
+        duration: newDuration,
+      };
     });
   };
 
@@ -500,6 +516,7 @@ export default function ServicesPage() {
         description: packageFormData.description,
         price: Number(packageFormData.price),
         services: packageFormData.selectedServiceIds,
+        duration: Number(packageFormData.duration),
       };
 
       const response = await apiPost<Package>("/packages", newPackage);
@@ -511,6 +528,7 @@ export default function ServicesPage() {
           name: "",
           description: "",
           price: "",
+          duration: "",
           selectedServiceIds: [],
         });
       }
@@ -533,6 +551,7 @@ export default function ServicesPage() {
         description: packageFormData.description,
         price: Number(packageFormData.price),
         services: packageFormData.selectedServiceIds,
+        duration: Number(packageFormData.duration),
       };
 
       const response = await apiPut<Package>(
@@ -548,6 +567,7 @@ export default function ServicesPage() {
           name: "",
           description: "",
           price: "",
+          duration: "",
           selectedServiceIds: [],
         });
       }
@@ -1743,6 +1763,30 @@ export default function ServicesPage() {
             )}
           </div>
 
+          <div>
+            <label
+              className="block text-white font-medium mb-2"
+              style={{ fontSize: `${responsive.fontSize.label}px` }}
+            >
+              Duration (minutes)
+            </label>
+            <input
+              type="number"
+              placeholder="0"
+              value={packageFormData.duration}
+              onChange={(e) =>
+                setPackageFormData({
+                  ...packageFormData,
+                  duration: e.target.value,
+                })
+              }
+              required
+              min="0"
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 p-3"
+              style={{ fontSize: `${responsive.fontSize.body}px` }}
+            />
+          </div>
+
           <button
             type="submit"
             disabled={submitting}
@@ -1919,6 +1963,30 @@ export default function ServicesPage() {
                 Total value of services: LKR {suggestedPrice}
               </div>
             )}
+          </div>
+
+          <div>
+            <label
+              className="block text-white font-medium mb-2"
+              style={{ fontSize: `${responsive.fontSize.label}px` }}
+            >
+              Duration (minutes)
+            </label>
+            <input
+              type="number"
+              placeholder="0"
+              value={packageFormData.duration}
+              onChange={(e) =>
+                setPackageFormData({
+                  ...packageFormData,
+                  duration: e.target.value,
+                })
+              }
+              required
+              min="0"
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 p-3"
+              style={{ fontSize: `${responsive.fontSize.body}px` }}
+            />
           </div>
 
           <button
