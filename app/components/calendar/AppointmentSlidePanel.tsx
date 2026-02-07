@@ -29,6 +29,15 @@ interface Service {
   price: number;
 }
 
+interface Package {
+  _id: string;
+  name: string;
+  description: string;
+  price: number;
+  duration: number;
+  services: Service[];
+}
+
 interface AppointmentResponse {
   _id: string;
   customerId: string;
@@ -82,6 +91,7 @@ export default function AppointmentSlidePanel({
   const [clients, setClients] = useState<Client[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
   const [services, setServices] = useState<Service[]>([]);
+  const [packages, setPackages] = useState<Package[]>([]);
   const [loadingClients, setLoadingClients] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string>("");
   const [selectedStaffIdState, setSelectedStaffIdState] = useState<string>("");
@@ -99,10 +109,11 @@ export default function AppointmentSlidePanel({
       setLoadingClients(true);
 
       try {
-        // Fetch staff and services first
-        const [staffRes, servicesRes] = await Promise.all([
+        // Fetch staff, services, and packages first
+        const [staffRes, servicesRes, packagesRes] = await Promise.all([
           apiGet<Staff[]>("/staff"),
           apiGet<Service[]>("/services"),
+          apiGet<Package[]>("/packages"),
         ]);
 
         if (staffRes.success && staffRes.data) {
@@ -110,6 +121,9 @@ export default function AppointmentSlidePanel({
         }
         if (servicesRes.success && servicesRes.data) {
           setServices(servicesRes.data);
+        }
+        if (packagesRes.success && packagesRes.data) {
+          setPackages(packagesRes.data);
         }
 
         // Fetch clients with pagination handling
@@ -340,6 +354,22 @@ export default function AppointmentSlidePanel({
       service: serviceNames || "",
       duration: totalDuration > 0 ? totalDuration.toString() : "60",
       price: totalPrice > 0 ? totalPrice.toString() : "",
+    });
+  };
+
+  // Handle package selection
+  const handlePackageSelect = (pkg: Package) => {
+    const pkgServiceIds = pkg.services.map((s) => s._id);
+
+    // Set selected services
+    setSelectedServiceIds(pkgServiceIds);
+
+    // Set form data with package details
+    setFormData({
+      ...formData,
+      service: pkg.name, // Display package name
+      duration: pkg.duration.toString(),
+      price: pkg.price.toString(),
     });
   };
 
@@ -669,6 +699,56 @@ See you soon! ✨
             </div>
 
             <div className="bg-zinc-800 border border-zinc-700 rounded-lg p-3 max-h-48 overflow-y-auto">
+              {/* Packages Section */}
+              {packages.length > 0 && (
+                <div className="mb-4">
+                  <div className="text-xs font-bold text-zinc-500 uppercase mb-2 sticky top-0 bg-zinc-800 py-1">
+                    Packages
+                  </div>
+                  <div className="space-y-2">
+                    {packages
+                      .filter((p) =>
+                        p.name
+                          .toLowerCase()
+                          .includes(serviceSearch.toLowerCase()),
+                      )
+                      .map((pkg) => (
+                        <div
+                          key={pkg._id}
+                          onClick={() => handlePackageSelect(pkg)}
+                          className="flex items-start gap-3 p-2 rounded hover:bg-zinc-700/50 cursor-pointer transition-colors border border-zinc-700/50"
+                        >
+                          <div className="mt-1 w-4 h-4 rounded-full border-2 border-zinc-600 flex items-center justify-center">
+                            {/* Radio-like circle or check if all services match? For now, just a click action */}
+                            <div className="w-2 h-2 rounded-full bg-transparent group-hover:bg-yellow-400/50"></div>
+                          </div>
+                          <div className="flex-1">
+                            <div className="text-white text-sm font-medium">
+                              {pkg.name}
+                            </div>
+                            <div className="text-zinc-400 text-xs">
+                              LKR {pkg.price} • {pkg.duration} min •{" "}
+                              {pkg.services.length} services
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    {packages.filter((p) =>
+                      p.name
+                        .toLowerCase()
+                        .includes(serviceSearch.toLowerCase()),
+                    ).length === 0 && (
+                      <p className="text-zinc-600 text-xs italic px-2">
+                        No packages match
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="text-xs font-bold text-zinc-500 uppercase mb-2 sticky top-0 bg-zinc-800 py-1">
+                Individual Services
+              </div>
               {services.length === 0 ? (
                 <p className="text-zinc-500 text-sm">No services available</p>
               ) : (
