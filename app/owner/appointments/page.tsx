@@ -2,10 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useScreenSize, getResponsiveValues } from "@/app/hooks/useScreenSize";
-import {
-  formatTimeToString,
-  Appointment,
-} from "@/app/utils/calendarUtils";
+import { formatTimeToString, Appointment } from "@/app/utils/calendarUtils";
 import StaffCalendarGrid from "@/app/components/calendar/StaffCalendarGrid";
 import AppointmentSlidePanel from "@/app/components/calendar/AppointmentSlidePanel";
 import AllAppointmentsView from "@/app/components/calendar/AllAppointmentsView";
@@ -96,7 +93,8 @@ export default function AppointmentsPage() {
 
   // Panel state
   const [isPanelOpen, setIsPanelOpen] = useState(false);
-  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [selectedAppointment, setSelectedAppointment] =
+    useState<Appointment | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<{
     date: Date;
     time: string;
@@ -108,7 +106,7 @@ export default function AppointmentsPage() {
   useEffect(() => {
     const fetchStaff = async () => {
       setLoadingStaff(true);
-      const response = await apiGet<StaffMember[]>('/staff');
+      const response = await apiGet<StaffMember[]>("/staff");
       if (response.success && response.data) {
         setStaff(response.data);
       }
@@ -122,34 +120,54 @@ export default function AppointmentsPage() {
     const appointmentDate = new Date(apt.appointmentDate);
 
     // Extract date in YYYY-MM-DD format
-    const dateStr = appointmentDate.toISOString().split('T')[0];
+    const dateStr = appointmentDate.toISOString().split("T")[0];
 
     // Extract time in 12-hour format
     const hours = appointmentDate.getHours();
     const minutes = appointmentDate.getMinutes();
-    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const ampm = hours >= 12 ? "PM" : "AM";
     const displayHours = hours % 12 || 12;
-    const timeStr = `${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+    const timeStr = `${displayHours}:${minutes.toString().padStart(2, "0")} ${ampm}`;
 
-    const serviceName = apt.services?.[0]?.name || 'Service';
-    const serviceDuration = apt.services?.[0]?.duration || 60;
-    // Use custom price if available, otherwise fallback to service price
-    const servicePrice = apt.price !== undefined ? apt.price : (apt.services?.[0]?.price || 0);
+    const serviceName =
+      apt.services?.map((s) => s.name).join(", ") || "Service";
+    const serviceDuration =
+      apt.services?.reduce((total, s) => total + s.duration, 0) || 60;
+    // Use custom price if available, otherwise fallback to sum of service prices
+    const servicePrice =
+      apt.price !== undefined
+        ? apt.price
+        : apt.services?.reduce((total, s) => total + s.price, 0) || 0;
 
     // Map backend status to frontend status type
-    const statusLower = apt.status?.toLowerCase() || 'pending';
-    const validStatuses = ['confirmed', 'pending', 'cancelled', 'in_progress', 'completed'];
-    const status: 'confirmed' | 'pending' | 'cancelled' | 'in_progress' | 'completed' =
-      validStatuses.includes(statusLower)
-        ? (statusLower as 'confirmed' | 'pending' | 'cancelled' | 'in_progress' | 'completed')
-        : 'pending';
+    const statusLower = apt.status?.toLowerCase() || "pending";
+    const validStatuses = [
+      "confirmed",
+      "pending",
+      "cancelled",
+      "in_progress",
+      "completed",
+    ];
+    const status:
+      | "confirmed"
+      | "pending"
+      | "cancelled"
+      | "in_progress"
+      | "completed" = validStatuses.includes(statusLower)
+      ? (statusLower as
+          | "confirmed"
+          | "pending"
+          | "cancelled"
+          | "in_progress"
+          | "completed")
+      : "pending";
 
     return {
       id: Date.now() + Math.random(), // Temporary numeric ID
       _id: apt._id, // MongoDB ID for editing
-      clientName: apt.customer?.name || 'Unknown Client',
-      phone: apt.customer?.phoneNumber || '',
-      staffName: apt.staff?.name || 'Unknown Staff',
+      clientName: apt.customer?.name || "Unknown Client",
+      phone: apt.customer?.phoneNumber || "",
+      staffName: apt.staff?.name || "Unknown Staff",
       service: serviceName,
       date: dateStr,
       time: timeStr,
@@ -166,15 +184,20 @@ export default function AppointmentsPage() {
 
     const loadAppointments = async () => {
       setLoadingAppointments(true);
-      const response = await apiGet<BackendAppointment[]>(`/appointments?page=${currentPage}&limit=${itemsPerPage}`);
+      const response = await apiGet<BackendAppointment[]>(
+        `/appointments?page=${currentPage}&limit=${itemsPerPage}`,
+      );
 
       if (!isMounted) return;
 
       if (response.success && response.data) {
         // The API returns pagination info at root level alongside data
-        const paginatedResponse = response as unknown as PaginatedAppointmentsResponse;
+        const paginatedResponse =
+          response as unknown as PaginatedAppointmentsResponse;
         // Transform backend appointments to frontend format
-        const transformedAppointments: Appointment[] = (response.data as BackendAppointment[]).map(transformAppointment);
+        const transformedAppointments: Appointment[] = (
+          response.data as BackendAppointment[]
+        ).map(transformAppointment);
         setAppointments(transformedAppointments);
         if (paginatedResponse.pagination) {
           setPagination(paginatedResponse.pagination);
@@ -192,7 +215,7 @@ export default function AppointmentsPage() {
 
   // Function to trigger a refetch
   const refreshAppointments = () => {
-    setRefreshKey(prev => prev + 1);
+    setRefreshKey((prev) => prev + 1);
   };
 
   // Handlers
@@ -201,7 +224,7 @@ export default function AppointmentsPage() {
     staffName: string,
     date: Date,
     hour: number,
-    minutes: number
+    minutes: number,
   ) => {
     // Create new appointment for specific staff member
     setSelectedAppointment(null);
@@ -261,14 +284,14 @@ export default function AppointmentsPage() {
   // Handle page change
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const stats = {
     total: pagination?.totalCount ?? appointments.length,
-    confirmed: appointments.filter(a => a.status === "confirmed").length,
-    pending: appointments.filter(a => a.status === "pending").length,
-    cancelled: appointments.filter(a => a.status === "cancelled").length
+    confirmed: appointments.filter((a) => a.status === "confirmed").length,
+    pending: appointments.filter((a) => a.status === "pending").length,
+    cancelled: appointments.filter((a) => a.status === "cancelled").length,
   };
 
   return (
@@ -280,8 +303,18 @@ export default function AppointmentsPage() {
           style={{ padding: `${spacing}px ${cardPadding}px` }}
         >
           <div>
-            <h1 className="font-bold" style={{ fontSize: `${responsive.fontSize.heading}px` }}>Appointments</h1>
-            <p className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.body}px` }}>View and manage all salon appointments</p>
+            <h1
+              className="font-bold"
+              style={{ fontSize: `${responsive.fontSize.heading}px` }}
+            >
+              Appointments
+            </h1>
+            <p
+              className="text-zinc-400"
+              style={{ fontSize: `${responsive.fontSize.body}px` }}
+            >
+              View and manage all salon appointments
+            </p>
           </div>
 
           {/* User Profile */}
@@ -294,64 +327,161 @@ export default function AppointmentsPage() {
         <div className="flex flex-col overflow-hidden h-full">
           {/* Stats - Fixed at top (Hidden when viewing all appointments) */}
           {!showAllAppointments && (
-            <div style={{ padding: `${spacing}px ${cardPadding}px ${spacing}px ${cardPadding}px` }}>
+            <div
+              style={{
+                padding: `${spacing}px ${cardPadding}px ${spacing}px ${cardPadding}px`,
+              }}
+            >
               <div
                 style={{
-                  display: 'grid',
-                  gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+                  display: "grid",
+                  gridTemplateColumns: isMobile
+                    ? "repeat(2, 1fr)"
+                    : "repeat(4, 1fr)",
                   gap: `${spacing}px`,
-                  marginBottom: `${spacing * 2}px`
+                  marginBottom: `${spacing * 2}px`,
                 }}
               >
-              <div className="bg-zinc-900 rounded-lg border border-zinc-800" style={{ padding: `${cardPadding}px` }}>
-                <div className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.small}px` }}>Total</div>
-                <div className="font-bold text-yellow-400" style={{ fontSize: `${responsive.fontSize.heading}px` }}>{stats.total}</div>
-              </div>
-              <div className="bg-zinc-900 rounded-lg border border-zinc-800" style={{ padding: `${cardPadding}px` }}>
-                <div className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.small}px` }}>Confirmed</div>
-                <div className="font-bold text-green-400" style={{ fontSize: `${responsive.fontSize.heading}px` }}>{stats.confirmed}</div>
-              </div>
-              <div className="bg-zinc-900 rounded-lg border border-zinc-800" style={{ padding: `${cardPadding}px` }}>
-                <div className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.small}px` }}>Pending</div>
-                <div className="font-bold text-orange-400" style={{ fontSize: `${responsive.fontSize.heading}px` }}>{stats.pending}</div>
-              </div>
-              <div className="bg-zinc-900 rounded-lg border border-zinc-800" style={{ padding: `${cardPadding}px` }}>
-                <div className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.small}px` }}>Cancelled</div>
-                <div className="font-bold text-red-400" style={{ fontSize: `${responsive.fontSize.heading}px` }}>{stats.cancelled}</div>
-              </div>
+                <div
+                  className="bg-zinc-900 rounded-lg border border-zinc-800"
+                  style={{ padding: `${cardPadding}px` }}
+                >
+                  <div
+                    className="text-zinc-400"
+                    style={{ fontSize: `${responsive.fontSize.small}px` }}
+                  >
+                    Total
+                  </div>
+                  <div
+                    className="font-bold text-yellow-400"
+                    style={{ fontSize: `${responsive.fontSize.heading}px` }}
+                  >
+                    {stats.total}
+                  </div>
+                </div>
+                <div
+                  className="bg-zinc-900 rounded-lg border border-zinc-800"
+                  style={{ padding: `${cardPadding}px` }}
+                >
+                  <div
+                    className="text-zinc-400"
+                    style={{ fontSize: `${responsive.fontSize.small}px` }}
+                  >
+                    Confirmed
+                  </div>
+                  <div
+                    className="font-bold text-green-400"
+                    style={{ fontSize: `${responsive.fontSize.heading}px` }}
+                  >
+                    {stats.confirmed}
+                  </div>
+                </div>
+                <div
+                  className="bg-zinc-900 rounded-lg border border-zinc-800"
+                  style={{ padding: `${cardPadding}px` }}
+                >
+                  <div
+                    className="text-zinc-400"
+                    style={{ fontSize: `${responsive.fontSize.small}px` }}
+                  >
+                    Pending
+                  </div>
+                  <div
+                    className="font-bold text-orange-400"
+                    style={{ fontSize: `${responsive.fontSize.heading}px` }}
+                  >
+                    {stats.pending}
+                  </div>
+                </div>
+                <div
+                  className="bg-zinc-900 rounded-lg border border-zinc-800"
+                  style={{ padding: `${cardPadding}px` }}
+                >
+                  <div
+                    className="text-zinc-400"
+                    style={{ fontSize: `${responsive.fontSize.small}px` }}
+                  >
+                    Cancelled
+                  </div>
+                  <div
+                    className="font-bold text-red-400"
+                    style={{ fontSize: `${responsive.fontSize.heading}px` }}
+                  >
+                    {stats.cancelled}
+                  </div>
+                </div>
               </div>
             </div>
           )}
 
           {/* Scrollable section with date navigator and grid */}
-          <div className="flex-1 flex flex-col overflow-hidden" style={{ padding: `0 ${cardPadding}px ${spacing}px ${cardPadding}px` }}>
+          <div
+            className="flex-1 flex flex-col overflow-hidden"
+            style={{
+              padding: `0 ${cardPadding}px ${spacing}px ${cardPadding}px`,
+            }}
+          >
             {/* Date Navigator with View All Bookings Button */}
-            <div className="flex items-center justify-between gap-3" style={{ marginBottom: `${spacing}px` }}>
+            <div
+              className="flex items-center justify-between gap-3"
+              style={{ marginBottom: `${spacing}px` }}
+            >
               {/* Date Navigator - Hidden when viewing all appointments */}
               {!showAllAppointments && (
-                <div className="flex items-center justify-between bg-zinc-900 rounded-lg border border-zinc-800 flex-1" style={{ padding: `${spacing}px ${cardPadding}px` }}>
+                <div
+                  className="flex items-center justify-between bg-zinc-900 rounded-lg border border-zinc-800 flex-1"
+                  style={{ padding: `${spacing}px ${cardPadding}px` }}
+                >
                   <button
                     onClick={handlePreviousDay}
                     className="text-zinc-400 hover:text-white transition-colors"
                   >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    <svg
+                      className="w-6 h-6"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 19l-7-7 7-7"
+                      />
                     </svg>
                   </button>
                   <div className="text-center flex items-center gap-3">
-                    <div className="font-bold text-white" style={{ fontSize: `${responsive.fontSize.body}px` }}>
-                      {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                    <div
+                      className="font-bold text-white"
+                      style={{ fontSize: `${responsive.fontSize.body}px` }}
+                    >
+                      {selectedDate.toLocaleDateString("en-US", {
+                        weekday: "long",
+                        month: "long",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
                     </div>
                     <div className="relative">
                       <input
                         type="date"
-                        value={selectedDate.toISOString().split('T')[0]}
+                        value={selectedDate.toISOString().split("T")[0]}
                         onChange={(e) => handleDateSelect(e.target.value)}
                         className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                       />
                       <button className="text-zinc-400 hover:text-yellow-400 transition-colors">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                          />
                         </svg>
                       </button>
                     </div>
@@ -360,8 +490,18 @@ export default function AppointmentsPage() {
                     onClick={handleNextDay}
                     className="text-zinc-400 hover:text-white transition-colors"
                   >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    <svg
+                      className="w-6 h-6"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 5l7 7-7 7"
+                      />
                     </svg>
                   </button>
                 </div>
@@ -372,21 +512,34 @@ export default function AppointmentsPage() {
                 onClick={handleToggleView}
                 className={`px-4 py-2 rounded-lg font-semibold transition-colors whitespace-nowrap ${
                   showAllAppointments
-                    ? 'bg-yellow-400 text-black'
-                    : 'bg-zinc-800 text-white hover:bg-zinc-700'
+                    ? "bg-yellow-400 text-black"
+                    : "bg-zinc-800 text-white hover:bg-zinc-700"
                 }`}
                 style={{ fontSize: `${responsive.fontSize.body}px` }}
               >
-                {showAllAppointments ? 'Hide All Bookings' : 'View All Bookings'}
+                {showAllAppointments
+                  ? "Hide All Bookings"
+                  : "View All Bookings"}
               </button>
             </div>
 
             {/* Conditional View */}
             {loadingStaff || loadingAppointments ? (
-              <div className="flex items-center justify-center" style={{ padding: `${spacing * 3}px` }}>
+              <div
+                className="flex items-center justify-center"
+                style={{ padding: `${spacing * 3}px` }}
+              >
                 <div className="text-center">
-                  <div className="w-12 h-12 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto" style={{ marginBottom: `${spacing}px` }}></div>
-                  <p className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.body}px` }}>Loading...</p>
+                  <div
+                    className="w-12 h-12 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto"
+                    style={{ marginBottom: `${spacing}px` }}
+                  ></div>
+                  <p
+                    className="text-zinc-400"
+                    style={{ fontSize: `${responsive.fontSize.body}px` }}
+                  >
+                    Loading...
+                  </p>
                 </div>
               </div>
             ) : showAllAppointments ? (
@@ -399,12 +552,39 @@ export default function AppointmentsPage() {
                 searchQuery={searchQuery}
               />
             ) : staff.length === 0 ? (
-              <div className="text-center bg-zinc-900 rounded-lg border border-zinc-800" style={{ padding: `${spacing * 3}px` }}>
-                <svg className="w-16 h-16 text-zinc-600 mx-auto" style={{ marginBottom: `${spacing}px` }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              <div
+                className="text-center bg-zinc-900 rounded-lg border border-zinc-800"
+                style={{ padding: `${spacing * 3}px` }}
+              >
+                <svg
+                  className="w-16 h-16 text-zinc-600 mx-auto"
+                  style={{ marginBottom: `${spacing}px` }}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
                 </svg>
-                <p className="text-zinc-400 font-semibold" style={{ fontSize: `${responsive.fontSize.body}px`, marginBottom: `${spacing / 2}px` }}>No staff members</p>
-                <p className="text-zinc-500" style={{ fontSize: `${responsive.fontSize.small}px` }}>Add staff members to view their schedules</p>
+                <p
+                  className="text-zinc-400 font-semibold"
+                  style={{
+                    fontSize: `${responsive.fontSize.body}px`,
+                    marginBottom: `${spacing / 2}px`,
+                  }}
+                >
+                  No staff members
+                </p>
+                <p
+                  className="text-zinc-500"
+                  style={{ fontSize: `${responsive.fontSize.small}px` }}
+                >
+                  Add staff members to view their schedules
+                </p>
               </div>
             ) : (
               <StaffCalendarGrid
