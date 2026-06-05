@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useSyncExternalStore } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -9,6 +9,10 @@ import { useAuth } from "@/app/context/AuthContext";
 import { SearchProvider, useSearch } from "@/app/context/SearchContext";
 import ProtectedRoute from "@/app/components/ProtectedRoute";
 import UserProfile from "@/app/components/UserProfile";
+
+const emptySubscribe = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
 
 function OwnerLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -19,6 +23,12 @@ function OwnerLayoutContent({ children }: { children: React.ReactNode }) {
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  
+  const isMounted = useSyncExternalStore(
+    emptySubscribe,
+    getClientSnapshot,
+    getServerSnapshot
+  );
 
   // Reset search query on path change
   useEffect(() => {
@@ -38,6 +48,7 @@ function OwnerLayoutContent({ children }: { children: React.ReactNode }) {
 
   const allMenuItems = [
     { name: "Dashboard", path: "/owner", icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" },
+    { name: "Attendance", path: "/owner/attendance", icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" },
     { name: "Staff", path: "/owner/staff", icon: "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" },
     { name: "Services", path: "/owner/services", icon: "M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243zm0-5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z" },
     { name: "Appointments", path: "/owner/appointments", icon: "M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" },
@@ -68,6 +79,10 @@ function OwnerLayoutContent({ children }: { children: React.ReactNode }) {
     logout();
     router.push("/login");
   };
+
+  if (!isMounted) {
+    return <div className="h-screen bg-black" />;
+  }
 
   return (
     <div className="h-screen bg-black text-white overflow-hidden flex flex-col">
@@ -138,7 +153,7 @@ function OwnerLayoutContent({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* Menu */}
-          <div className="flex flex-col flex-1 overflow-y-auto min-h-0" style={{ gap: `${spacing}px` }}>
+          <div className="flex flex-col flex-1 overflow-y-auto min-h-0 no-scrollbar" style={{ gap: `${spacing}px` }}>
             {!isSidebarCollapsed && (
               <div className="text-zinc-500 uppercase tracking-wider" style={{ fontSize: `${responsive.fontSize.small}px`, marginBottom: `${spacing}px` }}>MENU</div>
             )}

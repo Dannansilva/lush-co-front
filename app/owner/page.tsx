@@ -1,11 +1,23 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useScreenSize, getResponsiveValues, getResponsiveFontSize } from "@/app/hooks/useScreenSize";
 import { useAuth } from "@/app/context/AuthContext";
 import UserProfile from "@/app/components/UserProfile";
-import { apiGet } from "@/app/utils/api";
+import { apiGet, apiPost } from "@/app/utils/api";
+
+interface AttendanceRecord {
+  staffMember: {
+    _id: string;
+    name: string;
+    phoneNumber: string;
+  };
+  status: 'PRESENT' | 'ABSENT' | null;
+  markedBy?: string;
+  checkInTime?: string;
+  updatedAt?: string;
+}
 
 interface BackendAppointment {
   _id: string;
@@ -46,6 +58,35 @@ export default function OwnerDashboard() {
   const { user } = useAuth();
 
   const statCardSize = getResponsiveFontSize(width, 24, 32);
+
+  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
+  const [attendanceLoading, setAttendanceLoading] = useState(true);
+
+  // Fetch today's attendance records to display on stats card
+  useEffect(() => {
+    let active = true;
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    Promise.resolve().then(() => {
+      if (active) setAttendanceLoading(true);
+    });
+
+    apiGet<AttendanceRecord[]>(`/attendance?date=${todayStr}`).then((response) => {
+      if (active && response.success && response.data) {
+        setAttendance(response.data);
+        setAttendanceLoading(false);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const presentStaffCount = attendance.filter(r => r.status === 'PRESENT').length;
+  const totalStaffCount = attendance.length;
+
+  const isRestrictedUser = user?.userType === 'RECEPTIONIST' || user?.userType === 'FRONT_DESK';
   const cardPadding = Math.max(12, Math.min(width * 0.015, 20));
   const spacing = Math.max(12, Math.min(width * 0.02, 16));
 
@@ -234,7 +275,7 @@ export default function OwnerDashboard() {
           style={{
             padding: `${spacing}px ${cardPadding}px`,
             display: "grid",
-            gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : width < 1280 ? "repeat(2, 1fr)" : "repeat(4, 1fr)",
+            gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : width < 1280 ? "repeat(2, 1fr)" : "repeat(5, 1fr)",
             gap: `${spacing}px`,
           }}
         >
@@ -266,6 +307,22 @@ export default function OwnerDashboard() {
                   {loading ? '...' : stats.nextAppointmentText}
                 </div>
                 <div className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.small}px` }}>Next Appointment</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-zinc-900 rounded-xl border border-zinc-800" style={{ padding: `${isMobile ? cardPadding * 0.75 : cardPadding}px` }}>
+            <div className={`flex ${isMobile ? 'flex-col justify-center text-center gap-2' : 'items-center gap-3'}`}>
+              <div className={`rounded-full flex items-center justify-center bg-yellow-400 ${isMobile ? 'w-10 h-10' : 'w-12 h-12'}`}>
+                <svg className="w-6 h-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5.636 18.364a9 9 0 1112.728 0M12 3v9" />
+                </svg>
+              </div>
+              <div>
+                <div className="font-bold" style={{ fontSize: `${statCardSize}px` }}>
+                  {attendanceLoading ? '...' : `${presentStaffCount}/${totalStaffCount}`}
+                </div>
+                <div className="text-zinc-400" style={{ fontSize: `${responsive.fontSize.small}px` }}>Staff Present Today</div>
               </div>
             </div>
           </div>
@@ -385,6 +442,8 @@ export default function OwnerDashboard() {
               ))}
             </div>
           </div>
+
+
 
           {/* Quick Actions */}
           <div className="bg-zinc-900 rounded-xl border border-zinc-800 flex flex-col" style={{ padding: `${cardPadding}px` }}>
