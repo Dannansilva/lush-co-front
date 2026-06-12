@@ -17,6 +17,13 @@ export interface Appointment {
   status: "confirmed" | "pending" | "cancelled" | "in_progress" | "completed";
   phone: string;
   notes?: string;
+  servicesDetails?: Array<{
+    _id?: string;
+    name: string;
+    duration: number;
+    price: number;
+    category?: string;
+  }>;
 }
 
 // Week calculation functions

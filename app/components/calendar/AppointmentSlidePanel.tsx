@@ -128,7 +128,7 @@ export default function AppointmentSlidePanel({
 
         // Fetch clients with pagination handling
         let allClients: Client[] = [];
-        let currentPage = 1;
+        const currentPage = 1;
         const limit = 100; // Use a reasonable limit
 
         // Initial fetch
@@ -451,6 +451,10 @@ export default function AppointmentSlidePanel({
       }
 
       if (response.success) {
+        const selectedServices = services.filter((s) =>
+          selectedServiceIds.includes(s._id),
+        );
+
         // Create local appointment object for UI update
         const updatedAppointment: Appointment = {
           id: appointment?.id || Date.now(),
@@ -465,6 +469,7 @@ export default function AppointmentSlidePanel({
           price: parseFloat(formData.price),
           status: formData.status,
           notes: notes,
+          servicesDetails: selectedServices,
         };
 
         onSave(updatedAppointment);

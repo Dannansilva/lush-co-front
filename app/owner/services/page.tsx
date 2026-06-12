@@ -917,14 +917,6 @@ export default function ServicesPage() {
                               >
                                 LKR {service.price}
                               </span>
-                              <span
-                                className="text-yellow-400 font-semibold"
-                                style={{
-                                  fontSize: `${responsive.fontSize.body}px`,
-                                }}
-                              >
-                                LKR {service.price}
-                              </span>
                             </div>
 
                             <div

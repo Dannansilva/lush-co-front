@@ -9,6 +9,23 @@ import { useAuth } from "@/app/context/AuthContext";
 import { SearchProvider, useSearch } from "@/app/context/SearchContext";
 import ProtectedRoute from "@/app/components/ProtectedRoute";
 import UserProfile from "@/app/components/UserProfile";
+import { apiGet, apiPost } from "@/app/utils/api";
+
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding)
+    .replace(/\-/g, "+")
+    .replace(/_/g, "/");
+
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
 
 const emptySubscribe = () => () => {};
 const getClientSnapshot = () => true;
@@ -34,6 +51,58 @@ function OwnerLayoutContent({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setSearchQuery("");
   }, [pathname, setSearchQuery]);
+
+  // Register Service Worker and subscribe to push notifications
+  useEffect(() => {
+    if (typeof window === "undefined" || !("serviceWorker" in navigator) || !("PushManager" in window)) {
+      return;
+    }
+
+    const setupPushNotifications = async () => {
+      try {
+        const registration = await navigator.serviceWorker.register("/sw.js");
+        console.log("Service Worker registered:", registration.scope);
+
+        // Verify if user is logged in
+        if (!user) return;
+
+        // Fetch VAPID public key from backend
+        const keyRes = await apiGet<{ publicKey: string }>("/notifications/vapid-public-key");
+        if (!keyRes.success || !keyRes.data?.publicKey) {
+          console.error("Failed to fetch VAPID public key");
+          return;
+        }
+
+        const permission = await Notification.requestPermission();
+        if (permission !== "granted") {
+          console.log("Notification permission not granted");
+          return;
+        }
+
+        const applicationServerKey = urlBase64ToUint8Array(keyRes.data.publicKey);
+        let subscription = await registration.pushManager.getSubscription();
+
+        if (!subscription) {
+          subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey,
+          });
+        }
+
+        // Send subscription object to backend
+        const subscribeRes = await apiPost("/notifications/subscribe", subscription);
+        if (subscribeRes.success) {
+          console.log("Successfully subscribed to Web Push notifications");
+        } else {
+          console.error("Failed to save push subscription on backend:", subscribeRes.message);
+        }
+      } catch (err) {
+        console.error("Error setting up Web Push notifications:", err);
+      }
+    };
+
+    setupPushNotifications();
+  }, [user]);
 
   // Get responsive values based on screen size
   const responsive = getResponsiveValues(width, height);

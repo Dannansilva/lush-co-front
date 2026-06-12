@@ -264,13 +264,27 @@ export const AppointmentBillPDF: React.FC<AppointmentBillPDFProps> = ({ appointm
             </View>
 
             {/* Service Rows */}
-            {services.map((service, index) => (
-              <View key={index} style={styles.tableRow}>
-                <Text style={styles.tableCol1}>{service}</Text>
-                <Text style={styles.tableCol2}>{appointment.duration} min</Text>
-                <Text style={styles.tableCol3}>{formatCurrency(appointment.price)}</Text>
-              </View>
-            ))}
+            {appointment.servicesDetails && appointment.servicesDetails.length > 0 ? (
+              appointment.servicesDetails.map((service, index) => (
+                <View key={index} style={styles.tableRow}>
+                  <Text style={styles.tableCol1}>{service.name}</Text>
+                  <Text style={styles.tableCol2}>{service.duration} min</Text>
+                  <Text style={styles.tableCol3}>{formatCurrency(service.price)}</Text>
+                </View>
+              ))
+            ) : (
+              services.map((service, index) => {
+                const fallbackDuration = services.length === 1 ? appointment.duration : Math.round(appointment.duration / services.length);
+                const fallbackPrice = services.length === 1 ? appointment.price : Math.round(appointment.price / services.length);
+                return (
+                  <View key={index} style={styles.tableRow}>
+                    <Text style={styles.tableCol1}>{service}</Text>
+                    <Text style={styles.tableCol2}>{fallbackDuration} min</Text>
+                    <Text style={styles.tableCol3}>{formatCurrency(fallbackPrice)}</Text>
+                  </View>
+                );
+              })
+            )}
           </View>
         </View>
 

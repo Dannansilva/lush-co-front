@@ -175,6 +175,7 @@ export default function AppointmentsPage() {
       price: servicePrice,
       status,
       notes: apt.notes,
+      servicesDetails: apt.services,
     };
   };
 
